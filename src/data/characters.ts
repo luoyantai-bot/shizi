@@ -5,6 +5,7 @@ export interface CharacterEntry {
   wordExample: string;
   difficultyLevel: 'low' | 'medium' | 'high';
   sortOrder: number;
+  imageUrl: string;
 }
 
 // [character, pinyin, wordExample]
@@ -277,6 +278,7 @@ function buildCharacters(
       wordExample: word,
       difficultyLevel: level,
       sortOrder: startId + order,
+      imageUrl: `/images/chars/${char}.png`,
     });
   }
   return result;
