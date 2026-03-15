@@ -25,6 +25,7 @@ export default function ReviewPage() {
   const [showResult, setShowResult] = useState(false);
   const [lastResult, setLastResult] = useState('');
   const [knownCount, setKnownCount] = useState(0);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     const reviewChars = store.getTodayReviewCharacters();
@@ -61,6 +62,7 @@ export default function ReviewPage() {
   const handleNext = () => {
     setIsFlipped(false);
     setShowResult(false);
+    setImgError(false);
     if (isLast) {
       const hasNew = store.hasNewCharactersAvailable();
       navigate(hasNew ? '/new-characters' : '/learning-complete');
@@ -77,24 +79,24 @@ export default function ReviewPage() {
           ← 返回
         </button>
         <div className="bg-sky-100 px-3 py-1 rounded-full text-sm text-sky-700 font-medium">
-          复习 {currentIdx + 1} / {chars.length}
+          {currentIdx + 1} / {chars.length}
         </div>
       </div>
 
       {/* Progress dots */}
-      <div className="flex gap-1 justify-center mb-2 flex-wrap">
+      <div className="flex gap-1.5 justify-center mb-2">
         {chars.map((_, i) => (
           <div
             key={i}
             className={`h-1.5 rounded-full transition-all duration-300 ${
-              i < currentIdx ? 'w-4 bg-sky-500' : i === currentIdx ? 'w-6 bg-sky-500' : 'w-1.5 bg-sky-200'
+              i <= currentIdx ? 'w-6 bg-sky-500' : 'w-1.5 bg-sky-200'
             }`}
           />
         ))}
       </div>
 
       <div className="text-center text-xs text-gray-400 mb-4">
-        已认识 {knownCount}/{chars.length}
+        今日复习 · 已认识 {knownCount}/{chars.length}
       </div>
 
       {/* Flip Card */}
@@ -102,65 +104,73 @@ export default function ReviewPage() {
         <div className="flip-card-container w-full max-w-xs">
           <div
             className={`flip-card-inner ${isFlipped ? 'flipped' : ''}`}
-            onClick={handleFlip}
-            style={{ minHeight: '400px' }}
+            onClick={showResult ? undefined : handleFlip}
+            style={{ minHeight: '420px' }}
           >
-            {/* Front - Pure white, big character + sound */}
-            <div className="flip-card-front char-card rounded-3xl w-full text-center cursor-pointer flex flex-col items-center justify-center p-6">
-              <div className="text-[180px] leading-none font-bold text-gray-900 select-none mb-8">
+            {/* Front - White bg, big black character + sound */}
+            <div className="flip-card-front rounded-3xl p-8 w-full text-center cursor-pointer bg-white shadow-lg border border-gray-100">
+              <div className="text-5xl mb-4 mt-2">🤔</div>
+              <div className="text-lg text-gray-500 mb-2">这个字认识吗？</div>
+
+              <div className="text-[160px] leading-none font-bold text-gray-900 my-4 select-none" style={{ fontFamily: "'Noto Serif SC', 'Songti SC', 'SimSun', serif" }}>
                 {currentChar.character}
               </div>
 
+              {/* Sound Button */}
               <button
                 onClick={handleSpeak}
-                className="relative w-16 h-16 rounded-full bg-sky-500 text-white flex items-center justify-center text-2xl shadow-lg active:scale-90 transition-transform"
+                className="relative mx-auto w-14 h-14 rounded-full bg-sky-500 text-white flex items-center justify-center text-xl shadow-lg active:scale-90 transition-transform mb-3"
               >
                 <div className="absolute inset-0 rounded-full bg-sky-400 animate-pulse-ring" />
                 <span className="relative z-10">🔊</span>
               </button>
 
-              <div className="text-xs text-gray-300 mt-6">
-                点击卡片翻面查看拼音
+              <div className="text-sm text-gray-400 flex items-center justify-center gap-1 mt-2">
+                <span>👆</span> 点击卡片翻面查看答案
               </div>
             </div>
 
-            {/* Back - Pinyin + Character + Image + Word Example */}
-            <div className="flip-card-back char-card rounded-3xl w-full text-center cursor-pointer flex flex-col items-center justify-center p-4">
-              <div className="text-3xl text-amber-600 font-medium mb-1">
+            {/* Back - Pinyin + Word + Image */}
+            <div className="flip-card-back rounded-3xl p-6 w-full text-center bg-white shadow-lg border border-gray-100">
+              {/* Pinyin */}
+              <div className="text-3xl text-amber-600 font-medium mt-2 mb-1">
                 {currentChar.pinyin}
               </div>
 
-              <div className="text-[100px] leading-none font-bold text-gray-900 select-none mb-3">
+              {/* Character */}
+              <div className="text-[100px] leading-none font-bold text-gray-900 my-2 select-none" style={{ fontFamily: "'Noto Serif SC', 'Songti SC', 'SimSun', serif" }}>
                 {currentChar.character}
               </div>
 
-              {/* Character image */}
-              <div className="w-full flex justify-center mb-3">
-                <img
-                  src={currentChar.imageUrl}
-                  alt={`${currentChar.character}的象形图`}
-                  className="max-h-[140px] max-w-[200px] object-contain rounded-xl"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              </div>
-
-              <div className="text-xl text-gray-600">
-                <span className="bg-sky-50 px-5 py-1.5 rounded-xl inline-block border border-sky-100">
+              {/* Word Example */}
+              <div className="mt-2 text-2xl text-gray-600">
+                <span className="bg-amber-50 px-5 py-2 rounded-xl inline-block">
                   {currentChar.wordExample}
                 </span>
               </div>
 
+              {/* Character Image */}
+              {!imgError && (
+                <div className="mt-3 flex justify-center">
+                  <img
+                    src={currentChar.imageUrl}
+                    alt={currentChar.character}
+                    className="max-h-28 w-auto rounded-xl object-contain"
+                    onError={() => setImgError(true)}
+                  />
+                </div>
+              )}
+
+              {/* Sound button */}
               <button
                 onClick={handleSpeak}
-                className="mt-3 w-10 h-10 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-lg active:scale-90 transition-transform"
+                className="mt-3 mx-auto w-12 h-12 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-xl active:scale-90 transition-transform"
               >
                 🔊
               </button>
 
               {showResult && (
-                <div className={`mt-4 font-bold text-lg animate-fadeIn ${lastResult.includes('✓') ? 'text-emerald-600' : 'text-rose-500'}`}>
+                <div className={`mt-3 font-bold text-lg animate-fadeIn ${lastResult.includes('✓') ? 'text-emerald-600' : 'text-rose-500'}`}>
                   {lastResult}
                 </div>
               )}
@@ -169,10 +179,10 @@ export default function ReviewPage() {
         </div>
       </div>
 
-      {/* Action Buttons - ALWAYS visible */}
+      {/* Action Buttons - visible on both front and back */}
       <div className="mt-6 pb-4" style={{ minHeight: '72px' }}>
         {!showResult && (
-          <div className="flex gap-3">
+          <div className="flex gap-3 animate-slideUp">
             <button
               onClick={() => handleResult('unknown')}
               className="flex-1 py-4 rounded-2xl text-white font-bold text-lg btn-danger active:scale-95 transition-transform"
