@@ -124,25 +124,37 @@ export default function ReviewPage() {
               </div>
             </div>
 
-            {/* Back - Pinyin + Character + Word Example */}
-            <div className="flip-card-back char-card rounded-3xl w-full text-center cursor-pointer flex flex-col items-center justify-center p-6">
-              <div className="text-3xl text-amber-600 font-medium mb-2">
+            {/* Back - Pinyin + Character + Image + Word Example */}
+            <div className="flip-card-back char-card rounded-3xl w-full text-center cursor-pointer flex flex-col items-center justify-center p-4">
+              <div className="text-3xl text-amber-600 font-medium mb-1">
                 {currentChar.pinyin}
               </div>
 
-              <div className="text-[140px] leading-none font-bold text-gray-900 select-none mb-6">
+              <div className="text-[100px] leading-none font-bold text-gray-900 select-none mb-3">
                 {currentChar.character}
               </div>
 
-              <div className="text-2xl text-gray-600">
-                <span className="bg-sky-50 px-6 py-2 rounded-xl inline-block border border-sky-100">
+              {/* Character image */}
+              <div className="w-full flex justify-center mb-3">
+                <img
+                  src={currentChar.imageUrl}
+                  alt={`${currentChar.character}的象形图`}
+                  className="max-h-[140px] max-w-[200px] object-contain rounded-xl"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+
+              <div className="text-xl text-gray-600">
+                <span className="bg-sky-50 px-5 py-1.5 rounded-xl inline-block border border-sky-100">
                   {currentChar.wordExample}
                 </span>
               </div>
 
               <button
                 onClick={handleSpeak}
-                className="mt-6 w-12 h-12 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-xl active:scale-90 transition-transform"
+                className="mt-3 w-10 h-10 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-lg active:scale-90 transition-transform"
               >
                 🔊
               </button>
