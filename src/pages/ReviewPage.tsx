@@ -130,47 +130,41 @@ export default function ReviewPage() {
               </div>
             </div>
 
-            {/* Back - Pinyin + Word + Image */}
-            <div className="flip-card-back rounded-3xl p-6 w-full text-center bg-white shadow-lg border border-gray-100">
-              {/* Pinyin */}
-              <div className="text-3xl text-amber-600 font-medium mt-2 mb-1">
+            {/* Back - Pinyin + Image only */}
+            <div className="flip-card-back rounded-3xl p-4 w-full text-center bg-white shadow-lg border border-gray-100 flex flex-col items-center justify-center">
+              {/* Pinyin - smaller */}
+              <div className="text-xl text-amber-500 font-medium mb-2">
                 {currentChar.pinyin}
               </div>
 
-              {/* Character */}
-              <div className="text-[100px] leading-none font-bold text-gray-900 my-2 select-none" style={{ fontFamily: "'Noto Serif SC', 'Songti SC', 'SimSun', serif" }}>
-                {currentChar.character}
-              </div>
-
-              {/* Word Example */}
-              <div className="mt-2 text-2xl text-gray-600">
-                <span className="bg-amber-50 px-5 py-2 rounded-xl inline-block">
-                  {currentChar.wordExample}
-                </span>
-              </div>
-
-              {/* Character Image */}
-              {!imgError && (
-                <div className="mt-3 flex justify-center">
+              {/* Character Image - takes up most space */}
+              {!imgError ? (
+                <div className="flex-1 flex items-center justify-center w-full px-2">
                   <img
                     src={currentChar.imageUrl}
                     alt={currentChar.character}
-                    className="max-h-28 w-auto rounded-xl object-contain"
+                    className="w-full max-h-[320px] rounded-2xl object-contain"
                     onError={() => setImgError(true)}
                   />
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-[120px] leading-none font-bold text-gray-300 select-none" style={{ fontFamily: "'Noto Serif SC', 'Songti SC', 'SimSun', serif" }}>
+                    {currentChar.character}
+                  </div>
                 </div>
               )}
 
               {/* Sound button */}
               <button
                 onClick={handleSpeak}
-                className="mt-3 mx-auto w-12 h-12 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-xl active:scale-90 transition-transform"
+                className="mt-2 mx-auto w-11 h-11 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-lg active:scale-90 transition-transform"
               >
                 🔊
               </button>
 
               {showResult && (
-                <div className={`mt-3 font-bold text-lg animate-fadeIn ${lastResult.includes('✓') ? 'text-emerald-600' : 'text-rose-500'}`}>
+                <div className={`mt-2 font-bold text-lg animate-fadeIn ${lastResult.includes('✓') ? 'text-emerald-600' : 'text-rose-500'}`}>
                   {lastResult}
                 </div>
               )}
