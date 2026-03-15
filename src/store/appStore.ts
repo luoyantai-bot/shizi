@@ -74,7 +74,8 @@ export interface Stats {
   currentLevel: 'low' | 'medium' | 'high';
   todayNewCount: number; // only counts follow_read
   todayKnownDirectlyCount: number; // known_directly today (not counted toward 5 limit)
-  todayReviewCount: number;
+  todayReviewCount: number; // pending reviews due
+  todayReviewedCount: number; // reviews completed today
 }
 
 export interface DailyRecord {
@@ -123,13 +124,22 @@ function setLS(key: string, val: unknown) {
 }
 
 function today(): string {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
+  // Parse as local date to avoid timezone issues
+  const parts = dateStr.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function genId(): string {
@@ -289,6 +299,7 @@ export function getStats(): Stats {
   // Only follow_read counts toward the daily 5 new char limit
   const todayNewCount = todayRecords.filter(r => r.action === 'follow_read').length;
   const todayKnownDirectlyCount = todayRecords.filter(r => r.action === 'known_directly').length;
+  const todayReviewedCount = todayRecords.filter(r => r.action === 'review_known' || r.action === 'review_unknown').length;
 
   const reviewDue = all.filter(s =>
     s.status.startsWith('learning_stage_') && s.nextReviewAt && s.nextReviewAt <= todayStr
@@ -310,6 +321,7 @@ export function getStats(): Stats {
     todayNewCount,
     todayKnownDirectlyCount,
     todayReviewCount: reviewDue,
+    todayReviewedCount,
   };
 }
 
