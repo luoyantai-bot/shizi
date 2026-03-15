@@ -106,13 +106,19 @@ export default function HomePage() {
             reviewChars.length > 0 ? 'bg-white/80 shadow-md' : 'bg-gray-100/60'
           }`}
         >
-          <div className="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center text-2xl">
-            📝
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+            reviewChars.length > 0 ? 'bg-sky-100' : stats.todayReviewedCount > 0 ? 'bg-emerald-100' : 'bg-gray-100'
+          }`}>
+            {reviewChars.length > 0 ? '📝' : stats.todayReviewedCount > 0 ? '✅' : '📝'}
           </div>
           <div className="flex-1">
             <div className="font-bold text-gray-800">今日复习</div>
             <div className="text-sm text-gray-500">
-              {reviewChars.length > 0 ? `${reviewChars.length} 个字待复习` : '暂无复习任务'}
+              {reviewChars.length > 0
+                ? `${reviewChars.length} 个字待复习`
+                : stats.todayReviewedCount > 0
+                ? `今日已复习 ${stats.todayReviewedCount} 个字 ✅`
+                : '暂无复习任务'}
             </div>
           </div>
           {reviewChars.length > 0 && (
@@ -167,8 +173,12 @@ export default function HomePage() {
         </div>
         <div className="bg-white/60 rounded-2xl p-3 text-center">
           <div className="text-2xl mb-1">🔄</div>
-          <div className="text-xs text-gray-500">待复习</div>
-          <div className="font-bold text-amber-800">{reviewChars.length}</div>
+          <div className="text-xs text-gray-500">
+            {reviewChars.length > 0 ? '待复习' : '已复习'}
+          </div>
+          <div className="font-bold text-amber-800">
+            {reviewChars.length > 0 ? reviewChars.length : stats.todayReviewedCount}
+          </div>
         </div>
         <div className="bg-white/60 rounded-2xl p-3 text-center">
           <div className="text-2xl mb-1">🎯</div>
