@@ -74,8 +74,7 @@ export interface Stats {
   currentLevel: 'low' | 'medium' | 'high';
   todayNewCount: number; // only counts follow_read
   todayKnownDirectlyCount: number; // known_directly today (not counted toward 5 limit)
-  todayReviewCount: number; // pending reviews due
-  todayReviewedCount: number; // reviews completed today
+  todayReviewCount: number;
 }
 
 export interface DailyRecord {
@@ -124,22 +123,13 @@ function setLS(key: string, val: unknown) {
 }
 
 function today(): string {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return new Date().toISOString().split('T')[0];
 }
 
 function addDays(dateStr: string, days: number): string {
-  // Parse as local date to avoid timezone issues
-  const parts = dateStr.split('-');
-  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const d = new Date(dateStr);
   d.setDate(d.getDate() + days);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return d.toISOString().split('T')[0];
 }
 
 function genId(): string {
@@ -299,7 +289,6 @@ export function getStats(): Stats {
   // Only follow_read counts toward the daily 5 new char limit
   const todayNewCount = todayRecords.filter(r => r.action === 'follow_read').length;
   const todayKnownDirectlyCount = todayRecords.filter(r => r.action === 'known_directly').length;
-  const todayReviewedCount = todayRecords.filter(r => r.action === 'review_known' || r.action === 'review_unknown').length;
 
   const reviewDue = all.filter(s =>
     s.status.startsWith('learning_stage_') && s.nextReviewAt && s.nextReviewAt <= todayStr
@@ -321,142 +310,6 @@ export function getStats(): Stats {
     todayNewCount,
     todayKnownDirectlyCount,
     todayReviewCount: reviewDue,
-    todayReviewedCount,
-  };
-}
-
-// ===== Percentile Simulation =====
-export interface PercentileResult {
-  ageMonths: number;       // child's current age in months
-  ageLabel: string;        // e.g. "4岁3个月"
-  percentile: number;      // e.g. 70
-  percentileLabel: string; // e.g. "P70"
-  description: string;     // e.g. "超过同龄参考水平的 70% 小朋友"
-  referenceMedian: number; // the median literacy count for this age
-  level: 'below' | 'average' | 'above' | 'excellent'; // for styling
-}
-
-// Age-based reference standards (monthly granularity via interpolation)
-// These are the anchor points; we linearly interpolate between them
-const AGE_REFERENCE_ANCHORS = [
-  { months: 24, median: 10,   p25: 0,    p75: 25,   p90: 50   }, // 2岁
-  { months: 30, median: 25,   p25: 5,    p75: 50,   p90: 80   }, // 2.5岁
-  { months: 36, median: 50,   p25: 15,   p75: 100,  p90: 150  }, // 3岁
-  { months: 42, median: 100,  p25: 40,   p75: 180,  p90: 280  }, // 3.5岁
-  { months: 48, median: 200,  p25: 80,   p75: 350,  p90: 500  }, // 4岁
-  { months: 54, median: 350,  p25: 150,  p75: 500,  p90: 700  }, // 4.5岁
-  { months: 60, median: 600,  p25: 300,  p75: 800,  p90: 1000 }, // 5岁
-  { months: 66, median: 750,  p25: 450,  p75: 950,  p90: 1200 }, // 5.5岁
-  { months: 72, median: 1000, p25: 600,  p75: 1200, p90: 1500 }, // 6岁
-  { months: 78, median: 1200, p25: 800,  p75: 1500, p90: 1800 }, // 6.5岁
-  { months: 84, median: 1500, p25: 1000, p75: 1800, p90: 2200 }, // 7岁
-];
-
-function interpolateRef(ageMonths: number): { median: number; p25: number; p75: number; p90: number } {
-  // Clamp to range
-  if (ageMonths <= AGE_REFERENCE_ANCHORS[0].months) {
-    const a = AGE_REFERENCE_ANCHORS[0];
-    return { median: a.median, p25: a.p25, p75: a.p75, p90: a.p90 };
-  }
-  const last = AGE_REFERENCE_ANCHORS[AGE_REFERENCE_ANCHORS.length - 1];
-  if (ageMonths >= last.months) {
-    return { median: last.median, p25: last.p25, p75: last.p75, p90: last.p90 };
-  }
-  // Find bracketing anchors
-  for (let i = 0; i < AGE_REFERENCE_ANCHORS.length - 1; i++) {
-    const a = AGE_REFERENCE_ANCHORS[i];
-    const b = AGE_REFERENCE_ANCHORS[i + 1];
-    if (ageMonths >= a.months && ageMonths <= b.months) {
-      const t = (ageMonths - a.months) / (b.months - a.months);
-      return {
-        median: Math.round(a.median + t * (b.median - a.median)),
-        p25: Math.round(a.p25 + t * (b.p25 - a.p25)),
-        p75: Math.round(a.p75 + t * (b.p75 - a.p75)),
-        p90: Math.round(a.p90 + t * (b.p90 - a.p90)),
-      };
-    }
-  }
-  return { median: last.median, p25: last.p25, p75: last.p75, p90: last.p90 };
-}
-
-export function getPercentile(): PercentileResult | null {
-  const child = getChild();
-  if (!child) return null;
-
-  const now = new Date();
-  const ageMonths = (now.getFullYear() - child.birthYear) * 12 + (now.getMonth() + 1 - child.birthMonth);
-
-  if (ageMonths < 18 || ageMonths > 96) return null; // out of reasonable range
-
-  const years = Math.floor(ageMonths / 12);
-  const months = ageMonths % 12;
-  const ageLabel = months > 0 ? `${years}岁${months}个月` : `${years}岁`;
-
-  const stats = getStats();
-  const count = stats.literacyCount;
-  const ref = interpolateRef(ageMonths);
-
-  // Calculate simulated percentile
-  let percentile: number;
-  let level: 'below' | 'average' | 'above' | 'excellent';
-
-  if (count <= 0) {
-    percentile = 10;
-    level = 'below';
-  } else if (count < ref.p25) {
-    // Below P25: map [0, p25) -> [10, 25)
-    const ratio = ref.p25 > 0 ? count / ref.p25 : 0;
-    percentile = Math.round(10 + ratio * 15);
-    level = 'below';
-  } else if (count < ref.median) {
-    // Between P25 and P50: map [p25, median) -> [25, 50)
-    const range = ref.median - ref.p25;
-    const ratio = range > 0 ? (count - ref.p25) / range : 0;
-    percentile = Math.round(25 + ratio * 25);
-    level = 'average';
-  } else if (count < ref.p75) {
-    // Between P50 and P75: map [median, p75) -> [50, 75)
-    const range = ref.p75 - ref.median;
-    const ratio = range > 0 ? (count - ref.median) / range : 0;
-    percentile = Math.round(50 + ratio * 25);
-    level = 'above';
-  } else if (count < ref.p90) {
-    // Between P75 and P90: map [p75, p90) -> [75, 90)
-    const range = ref.p90 - ref.p75;
-    const ratio = range > 0 ? (count - ref.p75) / range : 0;
-    percentile = Math.round(75 + ratio * 15);
-    level = 'above';
-  } else {
-    // Above P90: map [p90, p90*1.5) -> [90, 99)
-    const ceiling = ref.p90 * 1.5;
-    const ratio = ceiling > ref.p90 ? Math.min((count - ref.p90) / (ceiling - ref.p90), 1) : 1;
-    percentile = Math.round(90 + ratio * 9);
-    level = 'excellent';
-  }
-
-  percentile = Math.max(5, Math.min(99, percentile));
-
-  let description: string;
-  if (percentile >= 90) {
-    description = `超过同龄参考水平的 ${percentile}% 小朋友，非常优秀！`;
-  } else if (percentile >= 70) {
-    description = `超过同龄参考水平的 ${percentile}% 小朋友，表现很棒！`;
-  } else if (percentile >= 50) {
-    description = `超过同龄参考水平的 ${percentile}% 小朋友，继续加油！`;
-  } else if (percentile >= 30) {
-    description = `接近同龄参考水平，坚持每天学习很快就能赶上！`;
-  } else {
-    description = `刚刚开始识字之旅，每天进步一点点就很棒！`;
-  }
-
-  return {
-    ageMonths,
-    ageLabel,
-    percentile,
-    percentileLabel: `P${percentile}`,
-    description,
-    referenceMedian: ref.median,
-    level,
   };
 }
 
@@ -658,6 +511,37 @@ export function getAdvice(): string[] {
     advice.push('✨ 开始今天的学习之旅吧！');
   }
   return advice;
+}
+
+// ===== Today's completed characters (for browse mode) =====
+export function getTodayFollowReadChars(): CharacterEntry[] {
+  const records = getRecords();
+  const todayStr = today();
+  const todayFollowReads = records.filter(r => r.date === todayStr && r.action === 'follow_read');
+  const seen = new Set<string>();
+  const result: CharacterEntry[] = [];
+  for (const r of todayFollowReads) {
+    if (seen.has(r.characterId)) continue;
+    seen.add(r.characterId);
+    const c = getCharacterById(r.characterId);
+    if (c) result.push(c);
+  }
+  return result;
+}
+
+export function getTodayCompletedReviewChars(): CharacterEntry[] {
+  const records = getRecords();
+  const todayStr = today();
+  const todayReviews = records.filter(r => r.date === todayStr && (r.action === 'review_known' || r.action === 'review_unknown'));
+  const seen = new Set<string>();
+  const result: CharacterEntry[] = [];
+  for (const r of todayReviews) {
+    if (seen.has(r.characterId)) continue;
+    seen.add(r.characterId);
+    const c = getCharacterById(r.characterId);
+    if (c) result.push(c);
+  }
+  return result;
 }
 
 // ===== Reset (for testing) =====
