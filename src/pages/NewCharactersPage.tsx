@@ -14,21 +14,18 @@ function speak(text: string) {
   }
 }
 
-// Phase of each card:
-// 'initial' → showing 已认识 / 跟读 buttons
-// 'follow_reading' → after clicking 跟读, showing 再次跟读 / 下一个 buttons
-type CardPhase = 'initial' | 'follow_reading';
-
 export default function NewCharactersPage() {
   const navigate = useNavigate();
   const [currentChar, setCurrentChar] = useState<CharacterEntry | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const [followReadCount, setFollowReadCount] = useState(0);
   const [knownCount, setKnownCount] = useState(0);
+  const [_totalSeen, setTotalSeen] = useState(0);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [transitioning, setTransitioning] = useState(false);
-  const [cardPhase, setCardPhase] = useState<CardPhase>('initial');
+  const [followReadMode, setFollowReadMode] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const loadNextChar = useCallback(() => {
     const stats = store.getStats();
@@ -52,7 +49,8 @@ export default function NewCharactersPage() {
     setIsFlipped(false);
     setShowFeedback(false);
     setTransitioning(false);
-    setCardPhase('initial');
+    setFollowReadMode(false);
+    setImgError(false);
   }, [navigate]);
 
   useEffect(() => {
@@ -62,7 +60,7 @@ export default function NewCharactersPage() {
   if (!currentChar) return null;
 
   const handleFlip = () => {
-    if (!showFeedback) {
+    if (!followReadMode) {
       setIsFlipped(!isFlipped);
     }
   };
@@ -72,8 +70,7 @@ export default function NewCharactersPage() {
     speak(currentChar.character);
   };
 
-  // Known directly: submit immediately, show brief feedback, then next char
-  const handleKnownDirectly = () => {
+  const handleKnown = () => {
     if (transitioning) return;
     setTransitioning(true);
 
@@ -85,50 +82,46 @@ export default function NewCharactersPage() {
     const newStats = store.getStats();
     setFollowReadCount(newStats.todayNewCount);
     setKnownCount(newStats.todayKnownDirectlyCount);
+    setTotalSeen(prev => prev + 1);
 
     setTimeout(() => {
       loadNextChar();
-    }, 600);
+    }, 800);
   };
 
-  // Follow read: auto-play sound, switch to follow_reading phase (don't submit yet)
   const handleFollowRead = () => {
     if (transitioning) return;
-    setCardPhase('follow_reading');
-    // Auto-flip to show pinyin + word
-    setIsFlipped(true);
-    // Auto-play pronunciation
-    speak(currentChar.character);
+
+    // If not yet in follow-read mode, submit and enter follow-read mode
+    if (!followReadMode) {
+      store.submitNewCharacter(currentChar.id, 'follow_read');
+
+      const newStats = store.getStats();
+      setFollowReadCount(newStats.todayNewCount);
+      setKnownCount(newStats.todayKnownDirectlyCount);
+      setTotalSeen(prev => prev + 1);
+
+      // Enter follow-read mode: flip to back and play sound
+      setFollowReadMode(true);
+      setIsFlipped(true);
+      speak(currentChar.character);
+    } else {
+      // Already in follow-read mode, just replay sound
+      speak(currentChar.character);
+    }
   };
 
-  // Re-read: play sound again, stay on same card
-  const handleReRead = () => {
-    speak(currentChar.character);
-  };
-
-  // Next: NOW submit the follow_read record, then move to next
-  const handleNext = () => {
+  const handleNextAfterFollowRead = () => {
     if (transitioning) return;
     setTransitioning(true);
 
-    // Submit the follow_read
-    store.submitNewCharacter(currentChar.id, 'follow_read');
-
-    const newStats = store.getStats();
-    setFollowReadCount(newStats.todayNewCount);
-    setKnownCount(newStats.todayKnownDirectlyCount);
-
-    setFeedbackText('跟读完成 📖');
-    setShowFeedback(true);
-
-    setTimeout(() => {
-      if (newStats.todayNewCount >= 5) {
-        const reviewChars = store.getTodayReviewCharacters();
-        navigate(reviewChars.length > 0 ? '/review' : '/learning-complete');
-      } else {
-        loadNextChar();
-      }
-    }, 600);
+    const stats = store.getStats();
+    if (stats.todayNewCount >= 5) {
+      const reviewChars = store.getTodayReviewCharacters();
+      navigate(reviewChars.length > 0 ? '/review' : '/learning-complete');
+    } else {
+      loadNextChar();
+    }
   };
 
   return (
@@ -146,7 +139,7 @@ export default function NewCharactersPage() {
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar for follow_read count */}
       <div className="mb-4">
         <div className="flex gap-1.5 justify-center">
           {[0, 1, 2, 3, 4].map(i => (
@@ -170,59 +163,66 @@ export default function NewCharactersPage() {
         <div className="flip-card-container w-full max-w-xs">
           <div
             className={`flip-card-inner ${isFlipped ? 'flipped' : ''}`}
-            onClick={handleFlip}
-            style={{ minHeight: '400px' }}
+            onClick={followReadMode ? undefined : handleFlip}
+            style={{ minHeight: '420px' }}
           >
-            {/* Front */}
-            <div className="flip-card-front char-card rounded-3xl w-full text-center cursor-pointer flex flex-col items-center justify-center p-6">
-              <div className="text-[180px] leading-none font-bold text-gray-900 select-none mb-8">
+            {/* Front - White background, big black character + sound */}
+            <div className="flip-card-front rounded-3xl p-8 w-full text-center cursor-pointer bg-white shadow-lg border border-gray-100">
+              {/* Big Character */}
+              <div className="text-[160px] leading-none font-bold text-gray-900 my-8 select-none" style={{ fontFamily: "'Noto Serif SC', 'Songti SC', 'SimSun', serif" }}>
                 {currentChar.character}
               </div>
 
+              {/* Sound Button */}
               <button
                 onClick={handleSpeak}
-                className="relative w-16 h-16 rounded-full bg-amber-500 text-white flex items-center justify-center text-2xl shadow-lg active:scale-90 transition-transform"
+                className="relative mx-auto w-16 h-16 rounded-full bg-amber-500 text-white flex items-center justify-center text-2xl shadow-lg active:scale-90 transition-transform mb-4"
               >
                 <div className="absolute inset-0 rounded-full bg-amber-400 animate-pulse-ring" />
                 <span className="relative z-10">🔊</span>
               </button>
 
-              <div className="text-xs text-gray-300 mt-6">
-                点击卡片翻面查看拼音
+              {/* Flip hint */}
+              <div className="text-sm text-gray-400 flex items-center justify-center gap-1 mt-3">
+                <span>👆</span> 点击卡片翻面查看拼音
               </div>
             </div>
 
-            {/* Back */}
-            <div className="flip-card-back char-card rounded-3xl w-full text-center cursor-pointer flex flex-col items-center justify-center p-4">
-              <div className="text-3xl text-amber-600 font-medium mb-1">
+            {/* Back - Pinyin + Word Example + Image */}
+            <div className="flip-card-back rounded-3xl p-6 w-full text-center bg-white shadow-lg border border-gray-100">
+              {/* Pinyin */}
+              <div className="text-3xl text-amber-600 font-medium mt-2 mb-1">
                 {currentChar.pinyin}
               </div>
 
-              <div className="text-[100px] leading-none font-bold text-gray-900 select-none mb-3">
+              {/* Character */}
+              <div className="text-[100px] leading-none font-bold text-gray-900 my-2 select-none" style={{ fontFamily: "'Noto Serif SC', 'Songti SC', 'SimSun', serif" }}>
                 {currentChar.character}
               </div>
 
-              {/* Character image */}
-              <div className="w-full flex justify-center mb-3">
-                <img
-                  src={currentChar.imageUrl}
-                  alt={`${currentChar.character}的象形图`}
-                  className="max-h-[140px] max-w-[200px] object-contain rounded-xl"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              </div>
-
-              <div className="text-xl text-gray-600">
-                <span className="bg-amber-50 px-5 py-1.5 rounded-xl inline-block border border-amber-100">
+              {/* Word Example */}
+              <div className="mt-2 text-2xl text-gray-600">
+                <span className="bg-amber-50 px-5 py-2 rounded-xl inline-block">
                   {currentChar.wordExample}
                 </span>
               </div>
 
+              {/* Character Image */}
+              {!imgError && (
+                <div className="mt-3 flex justify-center">
+                  <img
+                    src={currentChar.imageUrl}
+                    alt={currentChar.character}
+                    className="max-h-28 w-auto rounded-xl object-contain"
+                    onError={() => setImgError(true)}
+                  />
+                </div>
+              )}
+
+              {/* Sound button on back */}
               <button
                 onClick={handleSpeak}
-                className="mt-3 w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-lg active:scale-90 transition-transform"
+                className="mt-3 mx-auto w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xl active:scale-90 transition-transform"
               >
                 🔊
               </button>
@@ -233,21 +233,19 @@ export default function NewCharactersPage() {
         {/* Feedback overlay */}
         {showFeedback && (
           <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-            <div className={`animate-scaleIn text-2xl font-bold px-8 py-4 rounded-2xl shadow-xl ${
-              feedbackText.includes('认识') ? 'bg-emerald-500 text-white' : 'bg-sky-500 text-white'
-            }`}>
+            <div className="animate-scaleIn text-2xl font-bold px-8 py-4 rounded-2xl shadow-xl bg-emerald-500 text-white">
               {feedbackText}
             </div>
           </div>
         )}
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons - always visible (both front and back) */}
       <div className="mt-6 pb-4" style={{ minHeight: '72px' }}>
-        {!showFeedback && cardPhase === 'initial' && (
+        {!followReadMode && !showFeedback && (
           <div className="flex gap-3 animate-slideUp">
             <button
-              onClick={handleKnownDirectly}
+              onClick={handleKnown}
               className="flex-1 py-4 rounded-2xl text-white font-bold text-lg btn-success active:scale-95 transition-transform"
             >
               😊 已认识
@@ -260,17 +258,17 @@ export default function NewCharactersPage() {
             </button>
           </div>
         )}
-        {!showFeedback && cardPhase === 'follow_reading' && (
+        {followReadMode && !showFeedback && (
           <div className="flex gap-3 animate-slideUp">
             <button
-              onClick={handleReRead}
-              className="flex-1 py-4 rounded-2xl font-bold text-lg bg-amber-100 text-amber-700 border-2 border-amber-300 active:scale-95 transition-transform"
+              onClick={handleFollowRead}
+              className="flex-1 py-4 rounded-2xl text-white font-bold text-lg btn-secondary active:scale-95 transition-transform"
             >
-              🔄 再次跟读
+              🔁 再次跟读
             </button>
             <button
-              onClick={handleNext}
-              className="flex-1 py-4 rounded-2xl text-white font-bold text-lg btn-secondary active:scale-95 transition-transform"
+              onClick={handleNextAfterFollowRead}
+              className="flex-1 py-4 rounded-2xl text-white font-bold text-lg btn-primary active:scale-95 transition-transform"
             >
               下一个 →
             </button>
