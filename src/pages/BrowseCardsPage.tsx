@@ -17,7 +17,7 @@ function speak(text: string) {
 export default function BrowseCardsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const type = searchParams.get('type') || 'today-new';
+  const mode = searchParams.get('mode') || 'new'; // 'new' or 'review'
 
   const [chars, setChars] = useState<CharacterEntry[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -26,25 +26,22 @@ export default function BrowseCardsPage() {
 
   useEffect(() => {
     let list: CharacterEntry[] = [];
-    if (type === 'today-new') {
-      list = store.getTodayFollowReadChars();
-    } else if (type === 'today-review') {
-      list = store.getTodayCompletedReviewChars();
+    if (mode === 'new') {
+      list = store.getTodayFollowReadCharacters();
+    } else {
+      list = store.getTodayReviewedCharacters();
     }
     if (list.length === 0) {
       navigate('/home');
       return;
     }
     setChars(list);
-  }, [type, navigate]);
+  }, [mode, navigate]);
 
   if (chars.length === 0) return null;
 
   const currentChar = chars[currentIdx];
-  const isFirst = currentIdx === 0;
-  const isLast = currentIdx >= chars.length - 1;
-
-  const title = type === 'today-new' ? '今日跟读回顾' : '今日复习回顾';
+  const title = mode === 'new' ? '今日跟读回顾' : '今日复习回顾';
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
@@ -56,21 +53,19 @@ export default function BrowseCardsPage() {
   };
 
   const handlePrev = () => {
-    if (isFirst) return;
-    setCurrentIdx(currentIdx - 1);
-    setIsFlipped(false);
-    setImgError(false);
+    if (currentIdx > 0) {
+      setCurrentIdx(currentIdx - 1);
+      setIsFlipped(false);
+      setImgError(false);
+    }
   };
 
   const handleNext = () => {
-    if (isLast) return;
-    setCurrentIdx(currentIdx + 1);
-    setIsFlipped(false);
-    setImgError(false);
-  };
-
-  const handleReplay = () => {
-    speak(currentChar.character);
+    if (currentIdx < chars.length - 1) {
+      setCurrentIdx(currentIdx + 1);
+      setIsFlipped(false);
+      setImgError(false);
+    }
   };
 
   return (
@@ -99,7 +94,6 @@ export default function BrowseCardsPage() {
           />
         ))}
       </div>
-
       <div className="text-center text-xs text-gray-400 mb-4">
         {currentIdx + 1} / {chars.length}
       </div>
@@ -114,10 +108,7 @@ export default function BrowseCardsPage() {
           >
             {/* Front - Big character + sound */}
             <div className="flip-card-front rounded-3xl p-8 w-full text-center cursor-pointer bg-white shadow-lg border border-gray-100">
-              <div
-                className="text-[160px] leading-none font-bold text-gray-900 my-8 select-none"
-                style={{ fontFamily: "'Noto Serif SC', 'Songti SC', 'SimSun', serif" }}
-              >
+              <div className="text-[160px] leading-none font-bold text-gray-900 my-8 select-none" style={{ fontFamily: "'Noto Serif SC', 'Songti SC', 'SimSun', serif" }}>
                 {currentChar.character}
               </div>
 
@@ -142,27 +133,25 @@ export default function BrowseCardsPage() {
               </div>
 
               {/* Character Image */}
-              {!imgError ? (
-                <div className="flex-1 flex items-center justify-center w-full px-2">
+              {!imgError && (
+                <div className="flex justify-center flex-1 items-center">
                   <img
                     src={currentChar.imageUrl}
                     alt={currentChar.character}
-                    className="max-h-72 w-auto rounded-2xl object-contain"
+                    className="max-h-72 w-auto rounded-xl object-contain"
                     onError={() => setImgError(true)}
                   />
                 </div>
-              ) : (
+              )}
+              {imgError && (
                 <div className="flex-1 flex items-center justify-center">
-                  <div
-                    className="text-[120px] leading-none font-bold text-gray-900 select-none"
-                    style={{ fontFamily: "'Noto Serif SC', 'Songti SC', 'SimSun', serif" }}
-                  >
+                  <div className="text-[120px] leading-none font-bold text-gray-900 select-none" style={{ fontFamily: "'Noto Serif SC', 'Songti SC', 'SimSun', serif" }}>
                     {currentChar.character}
                   </div>
                 </div>
               )}
 
-              {/* Sound button */}
+              {/* Sound button on back */}
               <button
                 onClick={handleSpeak}
                 className="mt-4 mx-auto w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xl active:scale-90 transition-transform"
@@ -174,33 +163,30 @@ export default function BrowseCardsPage() {
         </div>
       </div>
 
-      {/* Bottom Buttons: Read aloud + Prev/Next navigation */}
-      <div className="mt-6 pb-4 space-y-3">
+      {/* Navigation Buttons */}
+      <div className="mt-6 pb-4 flex gap-3">
         <button
-          onClick={handleReplay}
-          className="w-full py-3 rounded-2xl bg-amber-100 text-amber-700 font-bold text-base active:scale-95 transition-transform"
+          onClick={handlePrev}
+          disabled={currentIdx === 0}
+          className={`flex-1 py-4 rounded-2xl font-bold text-lg transition-transform ${
+            currentIdx === 0
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'btn-secondary text-white active:scale-95'
+          }`}
         >
-          🔊 跟读发音
+          ← 上一个
         </button>
-        <div className="flex gap-3">
-          <button
-            onClick={handlePrev}
-            disabled={isFirst}
-            className={`flex-1 py-3 rounded-2xl font-bold text-base active:scale-95 transition-transform ${
-              isFirst
-                ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            ← 上一个
-          </button>
-          <button
-            onClick={isLast ? () => navigate('/home') : handleNext}
-            className="flex-1 py-3 rounded-2xl text-white font-bold text-base btn-primary active:scale-95 transition-transform"
-          >
-            {isLast ? '返回首页' : '下一个 →'}
-          </button>
-        </div>
+        <button
+          onClick={handleNext}
+          disabled={currentIdx >= chars.length - 1}
+          className={`flex-1 py-4 rounded-2xl font-bold text-lg transition-transform ${
+            currentIdx >= chars.length - 1
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'btn-primary text-white active:scale-95'
+          }`}
+        >
+          下一个 →
+        </button>
       </div>
     </div>
   );
