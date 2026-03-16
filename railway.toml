@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install bcryptjs && npm install && npm run build"
+buildCommand = "npm install bcryptjs && npm install jsonwebtoken && npm install && npm run build"
 
 [deploy]
 startCommand = "node server.js"
