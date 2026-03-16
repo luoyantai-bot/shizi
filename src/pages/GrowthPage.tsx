@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import * as store from '../store/appStore';
-import type { Stats, PercentileResult } from '../store/appStore';
+import type { Stats } from '../store/appStore';
 import { LEVEL_NAMES } from '../data/characters';
 
 export default function GrowthPage() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [percentile, setPercentile] = useState<PercentileResult | null>(null);
 
   useEffect(() => {
     setStats(store.getStats());
-    setPercentile(store.getPercentile());
   }, []);
 
   if (!stats) return null;
@@ -38,77 +36,6 @@ export default function GrowthPage() {
         </div>
         <div className="text-right text-sm text-amber-600 font-medium mt-1">{overallProgress}%</div>
       </div>
-
-      {/* Percentile Card */}
-      {percentile && (
-        <div className="animate-scaleIn mb-6">
-          <div className={`relative overflow-hidden rounded-3xl p-5 shadow-lg ${
-            percentile.level === 'excellent' ? 'bg-gradient-to-br from-amber-400 via-orange-400 to-red-400' :
-            percentile.level === 'above' ? 'bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400' :
-            percentile.level === 'average' ? 'bg-gradient-to-br from-sky-400 via-blue-400 to-indigo-400' :
-            'bg-gradient-to-br from-violet-400 via-purple-400 to-fuchsia-400'
-          }`}>
-            {/* Background decorations */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-6 -translate-x-6" />
-            <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-white/5 rounded-full" />
-            
-            <div className="relative z-10">
-              {/* Header */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-lg">👶</span>
-                <span className="text-white/90 text-sm font-medium">{percentile.ageLabel}的宝宝</span>
-              </div>
-
-              {/* Percentile display */}
-              <div className="flex items-end gap-3 mb-3">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-black text-white leading-none">{percentile.percentile}</span>
-                  <span className="text-xl font-bold text-white/80">%</span>
-                </div>
-                <div className="pb-1">
-                  <div className="text-white/90 text-sm font-medium">同龄百分位</div>
-                </div>
-              </div>
-
-              {/* Percentile bar */}
-              <div className="mb-3">
-                <div className="h-3 bg-white/20 rounded-full overflow-hidden relative">
-                  <div 
-                    className="h-full bg-white rounded-full transition-all duration-1000 ease-out" 
-                    style={{ width: `${percentile.percentile}%` }} 
-                  />
-                  {/* Marker dots at 25%, 50%, 75% */}
-                  <div className="absolute top-1/2 left-1/4 w-1.5 h-1.5 bg-white/40 rounded-full -translate-y-1/2" />
-                  <div className="absolute top-1/2 left-1/2 w-1.5 h-1.5 bg-white/40 rounded-full -translate-y-1/2" />
-                  <div className="absolute top-1/2 left-3/4 w-1.5 h-1.5 bg-white/40 rounded-full -translate-y-1/2" />
-                </div>
-                <div className="flex justify-between mt-1 text-white/50 text-[10px]">
-                  <span>P0</span>
-                  <span>P25</span>
-                  <span>P50</span>
-                  <span>P75</span>
-                  <span>P99</span>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl px-4 py-3">
-                <div className="text-white text-sm leading-relaxed">
-                  {percentile.level === 'excellent' && <span className="mr-1">🌟</span>}
-                  {percentile.level === 'above' && <span className="mr-1">👍</span>}
-                  {percentile.level === 'average' && <span className="mr-1">💪</span>}
-                  {percentile.level === 'below' && <span className="mr-1">🌱</span>}
-                  {percentile.description}
-                </div>
-                <div className="text-white/60 text-xs mt-1.5">
-                  同龄参考中位数：{percentile.referenceMedian} 字 | 当前已识字：{stats.literacyCount} 字
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Current Stage Indicator */}
       <div className="animate-fadeIn bg-gradient-to-r from-amber-100 to-orange-100 rounded-2xl p-4 mb-6">
