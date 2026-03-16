@@ -10,16 +10,16 @@ import LearningCompletePage from './pages/LearningCompletePage';
 import GrowthPage from './pages/GrowthPage';
 import MedalsPage from './pages/MedalsPage';
 import ReportPage from './pages/ReportPage';
+import BrowseCardsPage from './pages/BrowseCardsPage';
 
 function SplashPage() {
   const navigate = useNavigate();
   const [show, setShow] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       setShow(false);
-      // Try to restore session from server token
-      const user = await store.initAuth();
+      const user = store.getCurrentUser();
       if (!user) {
         navigate('/login');
       } else {
@@ -132,6 +132,9 @@ function AppContent() {
         } />
         <Route path="/report" element={
           <ChildGuard><ReportPage /></ChildGuard>
+        } />
+        <Route path="/browse" element={
+          <ChildGuard><BrowseCardsPage /></ChildGuard>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
