@@ -19,10 +19,6 @@ export default function HomePage() {
   const reviewChars = store.getTodayReviewCharacters();
   const hasNewChars = store.hasNewCharactersAvailable();
 
-  // Today's completed counts for browse mode
-  const todayFollowReadChars = store.getTodayFollowReadChars();
-  const todayCompletedReviews = store.getTodayCompletedReviewChars();
-
   return (
     <div className="min-h-screen pb-24 px-4 pt-6">
       {/* Header */}
@@ -104,135 +100,76 @@ export default function HomePage() {
         <h2 className="text-lg font-bold text-amber-800 mb-2">📋 今日任务</h2>
 
         {/* Review Task */}
-        {reviewChars.length > 0 ? (
-          <button
-            onClick={() => navigate('/review')}
-            className="w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98] bg-white/80 shadow-md"
-          >
-            <div className="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center text-2xl">
-              📝
+        <button
+          onClick={() => reviewChars.length > 0 ? navigate('/review') : null}
+          className={`w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98] ${
+            reviewChars.length > 0 ? 'bg-white/80 shadow-md' : 'bg-gray-100/60'
+          }`}
+        >
+          <div className="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center text-2xl">
+            📝
+          </div>
+          <div className="flex-1">
+            <div className="font-bold text-gray-800">今日复习</div>
+            <div className="text-sm text-gray-500">
+              {reviewChars.length > 0 ? `${reviewChars.length} 个字待复习` : '暂无复习任务'}
             </div>
-            <div className="flex-1">
-              <div className="font-bold text-gray-800">今日复习</div>
-              <div className="text-sm text-gray-500">
-                {reviewChars.length} 个字待复习
-              </div>
-            </div>
+          </div>
+          {reviewChars.length > 0 && (
             <div className="bg-sky-500 text-white text-xs font-bold px-3 py-1 rounded-full">
               开始
             </div>
-          </button>
-        ) : (
-          <div className="w-full text-left rounded-2xl p-4 flex items-center gap-4 bg-gray-100/60">
-            <div className="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center text-2xl">
-              📝
-            </div>
-            <div className="flex-1">
-              <div className="font-bold text-gray-800">今日复习</div>
-              <div className="text-sm text-gray-500">
-                {todayCompletedReviews.length > 0
-                  ? `今日已复习 ${todayCompletedReviews.length} 个字 ✅`
-                  : '暂无复习任务'}
-              </div>
-            </div>
-            {todayCompletedReviews.length > 0 && (
-              <button
-                onClick={() => navigate('/browse?type=today-review')}
-                className="bg-sky-100 text-sky-600 text-xs font-bold px-3 py-1 rounded-full"
-              >
-                回顾
-              </button>
-            )}
-          </div>
-        )}
+          )}
+        </button>
 
         {/* New Characters Task */}
-        {hasNewChars && reviewChars.length === 0 ? (
-          <button
-            onClick={() => navigate('/new-characters')}
-            className="w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98] bg-white/80 shadow-md"
-          >
-            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl">
-              ✨
+        <button
+          onClick={() => {
+            if (reviewChars.length > 0) {
+              navigate('/review');
+            } else if (hasNewChars) {
+              navigate('/new-characters');
+            }
+          }}
+          className={`w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98] ${
+            hasNewChars ? 'bg-white/80 shadow-md' : 'bg-gray-100/60'
+          }`}
+        >
+          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl">
+            ✨
+          </div>
+          <div className="flex-1">
+            <div className="font-bold text-gray-800">学习新字</div>
+            <div className="text-sm text-gray-500">
+              {hasNewChars
+                ? reviewChars.length > 0
+                  ? '有新字等你来学 (请先完成复习)'
+                  : '有新字等你来学'
+                : stats.todayNewCount >= 5
+                ? `今日已跟读 ${stats.todayNewCount} 个新字 ✅`
+                : '已完成所有字的学习 🎉'}
             </div>
-            <div className="flex-1">
-              <div className="font-bold text-gray-800">学习新字</div>
-              <div className="text-sm text-gray-500">有新字等你来学</div>
-            </div>
+          </div>
+          {hasNewChars && reviewChars.length === 0 && (
             <div className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full">
               开始
             </div>
-          </button>
-        ) : hasNewChars && reviewChars.length > 0 ? (
-          <button
-            onClick={() => navigate('/review')}
-            className="w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98] bg-white/80 shadow-md"
-          >
-            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl">
-              ✨
-            </div>
-            <div className="flex-1">
-              <div className="font-bold text-gray-800">学习新字</div>
-              <div className="text-sm text-gray-500">有新字等你来学 (请先完成复习)</div>
-            </div>
-          </button>
-        ) : (
-          <div className="w-full text-left rounded-2xl p-4 flex items-center gap-4 bg-gray-100/60">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl">
-              ✨
-            </div>
-            <div className="flex-1">
-              <div className="font-bold text-gray-800">学习新字</div>
-              <div className="text-sm text-gray-500">
-                {stats.todayNewCount >= 5
-                  ? `今日已跟读 ${stats.todayNewCount} 个新字 ✅`
-                  : '已完成所有字的学习 🎉'}
-              </div>
-            </div>
-            {todayFollowReadChars.length > 0 && (
-              <button
-                onClick={() => navigate('/browse?type=today-new')}
-                className="bg-amber-100 text-amber-600 text-xs font-bold px-3 py-1 rounded-full"
-              >
-                回顾
-              </button>
-            )}
-          </div>
-        )}
+          )}
+        </button>
       </div>
 
-      {/* Quick Stats - Clickable for browse */}
+      {/* Quick Stats */}
       <div className="mt-6 animate-fadeIn grid grid-cols-3 gap-3">
-        <button
-          onClick={() => todayFollowReadChars.length > 0 ? navigate('/browse?type=today-new') : null}
-          className={`bg-white/60 rounded-2xl p-3 text-center transition-all ${
-            todayFollowReadChars.length > 0 ? 'active:scale-95 cursor-pointer shadow-sm' : ''
-          }`}
-        >
+        <div className="bg-white/60 rounded-2xl p-3 text-center">
           <div className="text-2xl mb-1">📖</div>
           <div className="text-xs text-gray-500">今日跟读</div>
           <div className="font-bold text-amber-800">{stats.todayNewCount}/5</div>
-          {todayFollowReadChars.length > 0 && (
-            <div className="text-[10px] text-amber-500 mt-0.5">点击回顾</div>
-          )}
-        </button>
-        <button
-          onClick={() => todayCompletedReviews.length > 0 ? navigate('/browse?type=today-review') : null}
-          className={`bg-white/60 rounded-2xl p-3 text-center transition-all ${
-            todayCompletedReviews.length > 0 ? 'active:scale-95 cursor-pointer shadow-sm' : ''
-          }`}
-        >
+        </div>
+        <div className="bg-white/60 rounded-2xl p-3 text-center">
           <div className="text-2xl mb-1">🔄</div>
-          <div className="text-xs text-gray-500">
-            {reviewChars.length > 0 ? '待复习' : '已复习'}
-          </div>
-          <div className="font-bold text-amber-800">
-            {reviewChars.length > 0 ? reviewChars.length : todayCompletedReviews.length}
-          </div>
-          {todayCompletedReviews.length > 0 && reviewChars.length === 0 && (
-            <div className="text-[10px] text-sky-500 mt-0.5">点击回顾</div>
-          )}
-        </button>
+          <div className="text-xs text-gray-500">待复习</div>
+          <div className="font-bold text-amber-800">{reviewChars.length}</div>
+        </div>
         <div className="bg-white/60 rounded-2xl p-3 text-center">
           <div className="text-2xl mb-1">🎯</div>
           <div className="text-xs text-gray-500">总目标</div>
