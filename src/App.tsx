@@ -11,27 +11,27 @@ import GrowthPage from './pages/GrowthPage';
 import MedalsPage from './pages/MedalsPage';
 import ReportPage from './pages/ReportPage';
 import BrowseCardsPage from './pages/BrowseCardsPage';
-
 function SplashPage() {
   const navigate = useNavigate();
   const [show, setShow] = useState(true);
-
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShow(false);
-      const user = store.getCurrentUser();
-      if (!user) {
-        navigate('/login');
-      } else {
-        const child = store.getChild();
-        navigate(child ? '/home' : '/child-profile');
-      }
-    }, 2000);
-    return () => clearTimeout(timer);
+    const init = async () => {
+      // If there's a token, try loading data from server
+      await store.loadFromServer();
+      setTimeout(() => {
+        setShow(false);
+        const user = store.getCurrentUser();
+        if (!user) {
+          navigate('/login');
+        } else {
+          const child = store.getChild();
+          navigate(child ? '/home' : '/child-profile');
+        }
+      }, 1500);
+    };
+    init();
   }, [navigate]);
-
   if (!show) return null;
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center">
       <div className="animate-scaleIn text-center">
@@ -47,13 +47,11 @@ function SplashPage() {
     </div>
   );
 }
-
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const user = store.getCurrentUser();
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
-
 function ChildGuard({ children }: { children: React.ReactNode }) {
   const user = store.getCurrentUser();
   const child = store.getChild();
@@ -61,7 +59,6 @@ function ChildGuard({ children }: { children: React.ReactNode }) {
   if (!child) return <Navigate to="/child-profile" replace />;
   return <>{children}</>;
 }
-
 function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,10 +68,8 @@ function BottomNav() {
     { path: '/medals', icon: '🏅', label: '勋章' },
     { path: '/report', icon: '📊', label: '报告' },
   ];
-
   const showTabs = ['/home', '/growth', '/medals', '/report'].includes(location.pathname);
   if (!showTabs) return null;
-
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-amber-100 z-50">
       <div className="max-w-lg mx-auto flex justify-around py-2 px-4">
@@ -97,12 +92,10 @@ function BottomNav() {
           );
         })}
       </div>
-      {/* Safe area for iPhone */}
       <div className="h-[env(safe-area-inset-bottom)]" />
     </div>
   );
 }
-
 function AppContent() {
   return (
     <div className="max-w-lg mx-auto min-h-screen relative">
@@ -121,6 +114,9 @@ function AppContent() {
         <Route path="/review" element={
           <ChildGuard><ReviewPage /></ChildGuard>
         } />
+        <Route path="/browse" element={
+          <ChildGuard><BrowseCardsPage /></ChildGuard>
+        } />
         <Route path="/learning-complete" element={
           <ChildGuard><LearningCompletePage /></ChildGuard>
         } />
@@ -133,16 +129,12 @@ function AppContent() {
         <Route path="/report" element={
           <ChildGuard><ReportPage /></ChildGuard>
         } />
-        <Route path="/browse-cards" element={
-          <ChildGuard><BrowseCardsPage /></ChildGuard>
-        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <BottomNav />
     </div>
   );
 }
-
 export function App() {
   return (
     <HashRouter>
