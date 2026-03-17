@@ -10,23 +10,34 @@ import LearningCompletePage from './pages/LearningCompletePage';
 import GrowthPage from './pages/GrowthPage';
 import MedalsPage from './pages/MedalsPage';
 import ReportPage from './pages/ReportPage';
-import BrowseCardsPage from './pages/BrowseCardsPage';
 
 function SplashPage() {
   const navigate = useNavigate();
   const [show, setShow] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShow(false);
+    const init = async () => {
+      // If user is already logged in, sync cloud data first
       const user = store.getCurrentUser();
+      if (user) {
+        try {
+          await store.syncOnStartup();
+        } catch {
+          // Continue even if sync fails (offline mode)
+        }
+      }
+
+      setShow(false);
       if (!user) {
         navigate('/login');
       } else {
         const child = store.getChild();
         navigate(child ? '/home' : '/child-profile');
       }
-    }, 2000);
+    };
+
+    // Show splash for at least 1.5s, then init
+    const timer = setTimeout(init, 1500);
     return () => clearTimeout(timer);
   }, [navigate]);
 
@@ -132,9 +143,6 @@ function AppContent() {
         } />
         <Route path="/report" element={
           <ChildGuard><ReportPage /></ChildGuard>
-        } />
-        <Route path="/browse" element={
-          <ChildGuard><BrowseCardsPage /></ChildGuard>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
