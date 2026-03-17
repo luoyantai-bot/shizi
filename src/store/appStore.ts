@@ -522,6 +522,16 @@ export function getTodayLearnedCharacters(): CharacterEntry[] {
   const charIds = [...new Set(todayNew.map(r => r.characterId))];
   return charIds.map(id => getCharacterById(id)).filter(Boolean) as CharacterEntry[];
 }
+// Get characters that were follow_read today (for browsing after learning)
+export function getTodayFollowReadCharacters(): CharacterEntry[] {
+  const records = getRecords();
+  const todayStr = today();
+  const todayFollowReads = records.filter(r => r.date === todayStr && r.action === 'follow_read');
+  const charIds = [...new Set(todayFollowReads.map(r => r.characterId))];
+  return charIds
+    .map(id => getCharacterById(id))
+    .filter(Boolean) as CharacterEntry[];
+}
 export function getTodayReviewedCharacters(): CharacterEntry[] {
   const records = getRecords();
   const todayStr = today();
