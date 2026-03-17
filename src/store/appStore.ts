@@ -4,7 +4,6 @@ import { characters, getCharactersByLevel, getCharacterById, type CharacterEntry
 export interface UserData {
   userId: string;
   phone: string;
-  password: string;
   createdAt: string;
 }
 
@@ -64,7 +63,7 @@ export interface Stats {
   knownDirectly: number;
   learning: number;
   mastered: number;
-  literacyCount: number; // knownDirectly + mastered, shown as "已认识"
+  literacyCount: number;
   lowTotal: number;
   lowDone: number;
   mediumTotal: number;
@@ -72,10 +71,9 @@ export interface Stats {
   highTotal: number;
   highDone: number;
   currentLevel: 'low' | 'medium' | 'high';
-  todayNewCount: number; // only counts follow_read
-  todayKnownDirectlyCount: number; // known_directly today (not counted toward 5 limit)
+  todayNewCount: number;
+  todayKnownDirectlyCount: number;
   todayReviewCount: number;
-  todayReviewedCount: number; // how many reviews completed today
 }
 
 export interface DailyRecord {
@@ -111,7 +109,7 @@ export const MEDAL_DEFS: MedalDef[] = [
   { id: 'all_1000', name: '千字目标', description: '达成识字总目标', icon: '🎓', condition: (s) => s.literacyCount >= s.totalCharacters },
 ];
 
-// ===== Helpers =====
+// ===== LocalStorage Helpers =====
 function getLS<T>(key: string, fallback: T): T {
   try {
     const v = localStorage.getItem(key);
@@ -137,34 +135,130 @@ function genId(): string {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 }
 
-// ===== Auth =====
-export function getUsers(): UserData[] {
-  return getLS<UserData[]>(KEYS.users, []);
+// ===== API Layer =====
+let authToken: string | null = localStorage.getItem('literacy_token');
+
+async function apiFetch(path: string, options: RequestInit = {}) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  const res = await fetch(`/api${path}`, {
+    ...options,
+    headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || '请求失败');
+  return data;
 }
 
+// ===== Sync Layer =====
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleSyncPush() {
+  if (!authToken) return;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    syncPush().catch(err => console.error('Sync push failed:', err));
+  }, 300);
+}
+
+async function syncPush() {
+  if (!authToken) return;
+  const childKey = getChildKey();
+  const data = {
+    child: getChild(),
+    charStatuses: getLS(`${KEYS.charStatuses}_${childKey}`, []),
+    learningRecords: getLS(`${KEYS.learningRecords}_${childKey}`, []),
+    earnedMedals: getLS(`${KEYS.earnedMedals}_${childKey}`, []),
+  };
+  await apiFetch('/data/sync', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+async function syncPull() {
+  if (!authToken) return;
+  try {
+    const data = await apiFetch('/data/all');
+    if (data.child) {
+      const children = getLS<ChildData[]>(KEYS.children, []);
+      const user = getCurrentUser()!;
+      const idx = children.findIndex(c => c.userId === user.userId);
+      if (idx >= 0) children[idx] = data.child;
+      else children.push(data.child);
+      setLS(KEYS.children, children);
+    }
+    const childKey = data.child?.childId || 'default';
+    if (data.charStatuses) setLS(`${KEYS.charStatuses}_${childKey}`, data.charStatuses);
+    if (data.learningRecords) setLS(`${KEYS.learningRecords}_${childKey}`, data.learningRecords);
+    if (data.earnedMedals) setLS(`${KEYS.earnedMedals}_${childKey}`, data.earnedMedals);
+  } catch (err) {
+    console.error('Sync pull failed:', err);
+  }
+}
+
+// ===== Auth (API-based) =====
 export function getCurrentUser(): UserData | null {
   return getLS<UserData | null>(KEYS.currentUser, null);
 }
 
-export function register(phone: string, password: string): { ok: boolean; msg: string } {
-  const users = getUsers();
-  if (users.find(u => u.phone === phone)) return { ok: false, msg: '该手机号已注册' };
-  const user: UserData = { userId: genId(), phone, password, createdAt: new Date().toISOString() };
-  users.push(user);
-  setLS(KEYS.users, users);
-  setLS(KEYS.currentUser, user);
-  return { ok: true, msg: '注册成功' };
+export async function initAuth(): Promise<UserData | null> {
+  const token = localStorage.getItem('literacy_token');
+  if (!token) return null;
+  authToken = token;
+  try {
+    const user = await apiFetch('/me');
+    setLS(KEYS.currentUser, user);
+    await syncPull();
+    return user;
+  } catch {
+    authToken = null;
+    localStorage.removeItem('literacy_token');
+    localStorage.removeItem(KEYS.currentUser);
+    return null;
+  }
 }
 
-export function login(phone: string, password: string): { ok: boolean; msg: string } {
-  const users = getUsers();
-  const user = users.find(u => u.phone === phone && u.password === password);
-  if (!user) return { ok: false, msg: '手机号或密码错误' };
-  setLS(KEYS.currentUser, user);
-  return { ok: true, msg: '登录成功' };
+export async function register(phone: string, password: string): Promise<{ ok: boolean; msg: string }> {
+  try {
+    const data = await apiFetch('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ phone, password }),
+    });
+    authToken = data.token;
+    localStorage.setItem('literacy_token', data.token);
+    setLS(KEYS.currentUser, data.user);
+    return { ok: true, msg: '注册成功' };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '注册失败';
+    return { ok: false, msg: message };
+  }
+}
+
+export async function login(phone: string, password: string): Promise<{ ok: boolean; msg: string }> {
+  try {
+    const data = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ phone, password }),
+    });
+    authToken = data.token;
+    localStorage.setItem('literacy_token', data.token);
+    setLS(KEYS.currentUser, data.user);
+    await syncPull();
+    return { ok: true, msg: '登录成功' };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '登录失败';
+    return { ok: false, msg: message };
+  }
 }
 
 export function logout() {
+  authToken = null;
+  localStorage.removeItem('literacy_token');
   localStorage.removeItem(KEYS.currentUser);
 }
 
@@ -191,6 +285,7 @@ export function createChild(nickname: string, birthYear: number, birthMonth: num
   if (existing >= 0) children[existing] = child;
   else children.push(child);
   setLS(KEYS.children, children);
+  scheduleSyncPush();
   return child;
 }
 
@@ -287,15 +382,12 @@ export function getStats(): Stats {
 
   const records = getRecords();
   const todayRecords = records.filter(r => r.date === todayStr);
-  // Only follow_read counts toward the daily 5 new char limit
   const todayNewCount = todayRecords.filter(r => r.action === 'follow_read').length;
   const todayKnownDirectlyCount = todayRecords.filter(r => r.action === 'known_directly').length;
 
   const reviewDue = all.filter(s =>
     s.status.startsWith('learning_stage_') && s.nextReviewAt && s.nextReviewAt <= todayStr
   ).length;
-
-  const todayReviewedCount = todayRecords.filter(r => r.action === 'review_known' || r.action === 'review_unknown').length;
 
   return {
     totalCharacters: characters.length,
@@ -313,19 +405,16 @@ export function getStats(): Stats {
     todayNewCount,
     todayKnownDirectlyCount,
     todayReviewCount: reviewDue,
-    todayReviewedCount,
   };
 }
 
 // ===== Today's new characters =====
-// Returns whether there are still new characters available to learn today
 export function hasNewCharactersAvailable(): boolean {
   const stats = getStats();
-  if (stats.todayNewCount >= 5) return false; // 5 follow_reads done
+  if (stats.todayNewCount >= 5) return false;
   return getNextNewCharacter() !== null;
 }
 
-// Get the next single unlearned character
 export function getNextNewCharacter(): CharacterEntry | null {
   const stats = getStats();
   const all = getAllStatuses();
@@ -343,7 +432,6 @@ export function getNextNewCharacter(): CharacterEntry | null {
   return null;
 }
 
-// Legacy: returns a batch for display (used by HomePage for count)
 export function getTodayNewCharacters(): CharacterEntry[] {
   const stats = getStats();
   if (stats.todayNewCount >= 5) return [];
@@ -354,7 +442,6 @@ export function getTodayNewCharacters(): CharacterEntry[] {
   const startIdx = levels.indexOf(stats.currentLevel);
 
   const result: CharacterEntry[] = [];
-  // Return up to 10 to show there are chars available (we don't know how many will be known_directly)
   const maxFetch = 10;
   for (let i = startIdx; i < levels.length && result.length < maxFetch; i++) {
     const levelChars = getCharactersByLevel(levels[i]).filter(c => !learnedIds.has(c.id));
@@ -388,6 +475,7 @@ export function submitNewCharacter(charId: string, action: 'known_directly' | 'f
     addRecord(charId, 'follow_read');
   }
   checkMedals();
+  scheduleSyncPush();
 }
 
 // ===== Today's review characters =====
@@ -439,6 +527,7 @@ export function submitReview(charId: string, result: 'known' | 'unknown') {
     addRecord(charId, 'review_known');
   }
   checkMedals();
+  scheduleSyncPush();
 }
 
 // ===== Medals =====
@@ -515,29 +604,6 @@ export function getAdvice(): string[] {
     advice.push('✨ 开始今天的学习之旅吧！');
   }
   return advice;
-}
-
-// ===== Browse today's chars =====
-// Get characters that were follow_read today (for browsing after learning)
-export function getTodayFollowReadCharacters(): CharacterEntry[] {
-  const records = getRecords();
-  const todayStr = today();
-  const todayFollowReads = records.filter(r => r.date === todayStr && r.action === 'follow_read');
-  const charIds = [...new Set(todayFollowReads.map(r => r.characterId))];
-  return charIds
-    .map(id => getCharacterById(id))
-    .filter(Boolean) as CharacterEntry[];
-}
-
-// Get characters that were reviewed today (for browsing after review)
-export function getTodayReviewedCharacters(): CharacterEntry[] {
-  const records = getRecords();
-  const todayStr = today();
-  const todayReviews = records.filter(r => r.date === todayStr && (r.action === 'review_known' || r.action === 'review_unknown'));
-  const charIds = [...new Set(todayReviews.map(r => r.characterId))];
-  return charIds
-    .map(id => getCharacterById(id))
-    .filter(Boolean) as CharacterEntry[];
 }
 
 // ===== Reset (for testing) =====
