@@ -18,6 +18,8 @@ export default function HomePage() {
   const progress = Math.round((stats.literacyCount / stats.totalCharacters) * 100);
   const reviewChars = store.getTodayReviewCharacters();
   const hasNewChars = store.hasNewCharactersAvailable();
+  const todayFollowReadChars = store.getTodayFollowReadCharacters();
+  const todayReviewedChars = store.getTodayReviewedCharacters();
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-6">
