@@ -650,7 +650,6 @@ export function getAdvice(): string[] {
   }
   return advice;
 }
-
 // ===== Today's browsable characters =====
 // Get characters that were follow_read today (for "今日跟读" browse)
 export function getTodayFollowReadCharacters(): CharacterEntry[] {
@@ -679,9 +678,9 @@ export function getTodayReviewedCharacters(): CharacterEntry[] {
     .map(id => getCharacterById(id))
     .filter(Boolean) as CharacterEntry[];
 }
+
 // ===== Reset (for testing) =====
 export function resetAllData() {
   const keys = Object.keys(localStorage).filter(k => k.startsWith('literacy_'));
   keys.forEach(k => localStorage.removeItem(k));
-  setToken(null);
 }
