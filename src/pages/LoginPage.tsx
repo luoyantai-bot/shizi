@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as store from '../store/appStore';
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [isRegister, setIsRegister] = useState(false);
@@ -8,6 +9,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -20,17 +22,23 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    const result = isRegister
-      ? await store.register(phone, password)
-      : await store.login(phone, password);
-    setLoading(false);
-    if (result.ok) {
-      const child = store.getChild();
-      navigate(child ? '/home' : '/child-profile');
-    } else {
-      setError(result.msg);
+    try {
+      const result = isRegister
+        ? await store.register(phone, password)
+        : await store.login(phone, password);
+      if (result.ok) {
+        const child = store.getChild();
+        navigate(child ? '/home' : '/child-profile');
+      } else {
+        setError(result.msg);
+      }
+    } catch {
+      setError('网络连接失败，请检查网络');
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-8">
       <div className="animate-fadeIn w-full max-w-sm">
@@ -40,6 +48,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-amber-800">少儿识字乐园</h1>
           <p className="text-amber-600 mt-2 text-sm">每天5个字，轻松学识字</p>
         </div>
+
         {/* Form */}
         <div className="bg-white/80 backdrop-blur rounded-3xl p-6 shadow-lg">
           <h2 className="text-xl font-bold text-center text-gray-800 mb-6">
@@ -54,8 +63,8 @@ export default function LoginPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="请输入手机号"
-                className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none text-gray-800 bg-white"
                 disabled={loading}
+                className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none text-gray-800 bg-white disabled:opacity-50"
               />
             </div>
             <div>
@@ -65,23 +74,34 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="请输入密码"
-                className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none text-gray-800 bg-white"
                 disabled={loading}
+                className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none text-gray-800 bg-white disabled:opacity-50"
               />
             </div>
+
             {error && (
               <p className="text-red-500 text-sm text-center">{error}</p>
             )}
+
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3 rounded-xl text-white font-bold text-lg btn-primary active:scale-95 transition-transform ${
-                loading ? 'opacity-60' : ''
-              }`}
+              className="w-full py-3 rounded-xl text-white font-bold text-lg btn-primary active:scale-95 transition-transform disabled:opacity-60"
             >
-              {loading ? '请稍候...' : isRegister ? '注册' : '登录'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  {isRegister ? '注册中...' : '登录中...'}
+                </span>
+              ) : (
+                isRegister ? '注册' : '登录'
+              )}
             </button>
           </form>
+
           <div className="mt-4 text-center">
             <button
               onClick={() => { setIsRegister(!isRegister); setError(''); }}
@@ -92,8 +112,9 @@ export default function LoginPage() {
             </button>
           </div>
         </div>
+
         <p className="text-center text-amber-500/60 text-xs mt-6">
-          数据安全存储在云端服务器
+          数据安全保存在云端，换设备也不丢失
         </p>
       </div>
     </div>
