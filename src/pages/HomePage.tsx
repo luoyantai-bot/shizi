@@ -3,24 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import * as store from '../store/appStore';
 import type { Stats } from '../store/appStore';
 import { LEVEL_LABELS, LEVEL_NAMES } from '../data/characters';
-
 export default function HomePage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const child = store.getChild();
-
   useEffect(() => {
     setStats(store.getStats());
   }, []);
-
   if (!stats) return null;
-
   const progress = Math.round((stats.literacyCount / stats.totalCharacters) * 100);
   const reviewChars = store.getTodayReviewCharacters();
   const hasNewChars = store.hasNewCharactersAvailable();
-  const todayFollowReadChars = store.getTodayFollowReadCharacters();
-  const todayReviewedChars = store.getTodayReviewedCharacters();
-
+  const todayLearned = store.getTodayLearnedCharacters();
+  const todayReviewed = store.getTodayReviewedCharacters();
   return (
     <div className="min-h-screen pb-24 px-4 pt-6">
       {/* Header */}
@@ -38,7 +33,6 @@ export default function HomePage() {
           退出
         </button>
       </div>
-
       {/* Literacy Count Circle */}
       <div className="animate-scaleIn bg-white/80 backdrop-blur rounded-3xl p-6 shadow-lg mb-6">
         <div className="flex items-center justify-center">
@@ -64,7 +58,6 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        {/* Two columns: 已认识 (combined) + 学习中 */}
         <div className="flex justify-around mt-4 text-center">
           <div>
             <div className="text-lg font-bold text-emerald-600">{stats.literacyCount}</div>
@@ -77,7 +70,6 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-
       {/* Current Level */}
       <div className="animate-fadeIn bg-gradient-to-r from-amber-100 to-orange-100 rounded-2xl p-4 mb-6">
         <div className="flex items-center gap-2">
@@ -96,11 +88,9 @@ export default function HomePage() {
         </div>
         <div className="text-right text-xs text-amber-600 mt-1">{progress}%</div>
       </div>
-
       {/* Today's Tasks */}
       <div className="space-y-3 animate-fadeIn">
         <h2 className="text-lg font-bold text-amber-800 mb-2">📋 今日任务</h2>
-
         {/* Review Task */}
         <button
           onClick={() => reviewChars.length > 0 ? navigate('/review') : null}
@@ -123,7 +113,6 @@ export default function HomePage() {
             </div>
           )}
         </button>
-
         {/* New Characters Task */}
         <button
           onClick={() => {
@@ -159,37 +148,32 @@ export default function HomePage() {
           )}
         </button>
       </div>
-
-      {/* Quick Stats */}
+      {/* Quick Stats - clickable to browse cards */}
       <div className="mt-6 animate-fadeIn grid grid-cols-3 gap-3">
         <button
-          onClick={() => todayFollowReadChars.length > 0 && navigate('/browse-cards?mode=new')}
+          onClick={() => todayLearned.length > 0 ? navigate('/browse?type=new') : null}
           className={`bg-white/60 rounded-2xl p-3 text-center transition-all ${
-            todayFollowReadChars.length > 0 ? 'active:scale-95 cursor-pointer hover:bg-white/80' : ''
+            todayLearned.length > 0 ? 'active:scale-95 cursor-pointer' : ''
           }`}
         >
           <div className="text-2xl mb-1">📖</div>
           <div className="text-xs text-gray-500">今日跟读</div>
           <div className="font-bold text-amber-800">{stats.todayNewCount}/5</div>
-          {todayFollowReadChars.length > 0 && (
-            <div className="text-[10px] text-amber-500 mt-1">点击回顾 →</div>
+          {todayLearned.length > 0 && (
+            <div className="text-[10px] text-amber-500 mt-0.5">点击查看 →</div>
           )}
         </button>
         <button
-          onClick={() => todayReviewedChars.length > 0 && navigate('/browse-cards?mode=review')}
+          onClick={() => todayReviewed.length > 0 ? navigate('/browse?type=review') : null}
           className={`bg-white/60 rounded-2xl p-3 text-center transition-all ${
-            todayReviewedChars.length > 0 ? 'active:scale-95 cursor-pointer hover:bg-white/80' : ''
+            todayReviewed.length > 0 ? 'active:scale-95 cursor-pointer' : ''
           }`}
         >
           <div className="text-2xl mb-1">🔄</div>
-          <div className="text-xs text-gray-500">
-            {todayReviewedChars.length > 0 ? '已复习' : '待复习'}
-          </div>
-          <div className="font-bold text-amber-800">
-            {todayReviewedChars.length > 0 ? todayReviewedChars.length : reviewChars.length}
-          </div>
-          {todayReviewedChars.length > 0 && (
-            <div className="text-[10px] text-amber-500 mt-1">点击回顾 →</div>
+          <div className="text-xs text-gray-500">已复习</div>
+          <div className="font-bold text-amber-800">{todayReviewed.length}</div>
+          {todayReviewed.length > 0 && (
+            <div className="text-[10px] text-amber-500 mt-0.5">点击查看 →</div>
           )}
         </button>
         <div className="bg-white/60 rounded-2xl p-3 text-center">
