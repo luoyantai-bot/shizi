@@ -144,9 +144,6 @@ function AppContent() {
         <Route path="/report" element={
           <ChildGuard><ReportPage /></ChildGuard>
         } />
-        <Route path="/browse-cards" element={
-          <ChildGuard><BrowseCardsPage /></ChildGuard>
-        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <BottomNav />
