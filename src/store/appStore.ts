@@ -173,7 +173,7 @@ export async function loadFromServer(): Promise<boolean> {
   const token = getToken();
   if (!token) return false;
   try {
-    const res = await fetch(`/api/data/load?token=${encodeURIComponent(token)}`);
+    const res = await fetch(`/api/sync/download?token=${encodeURIComponent(token)}`);
     if (!res.ok) {
       // Token invalid, clear local auth
       clearLocalData();
