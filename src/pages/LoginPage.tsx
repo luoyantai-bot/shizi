@@ -33,7 +33,7 @@ export default function LoginPage() {
         setError(result.msg);
       }
     } catch {
-      setError('网络连接失败，请检查网络');
+      setError('网络错误，请重试');
     } finally {
       setLoading(false);
     }
@@ -88,17 +88,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-3 rounded-xl text-white font-bold text-lg btn-primary active:scale-95 transition-transform disabled:opacity-60"
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  {isRegister ? '注册中...' : '登录中...'}
-                </span>
-              ) : (
-                isRegister ? '注册' : '登录'
-              )}
+              {loading ? '处理中...' : (isRegister ? '注册' : '登录')}
             </button>
           </form>
 
@@ -114,7 +104,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-amber-500/60 text-xs mt-6">
-          数据安全保存在云端，换设备也不丢失
+          数据云端同步，多设备可用
         </p>
       </div>
     </div>
