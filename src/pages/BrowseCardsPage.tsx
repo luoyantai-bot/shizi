@@ -41,7 +41,7 @@ export default function BrowseCardsPage() {
     );
   }
   const currentChar = chars[currentIdx];
-  const title = type === 'review' ? '今日已复习' : '今日已学习';
+  const title = type === 'review' ? '今日复习回顾' : '今日跟读回顾';
   const handleFlip = () => setIsFlipped(!isFlipped);
   const handleSpeak = (e: React.MouseEvent) => {
     e.stopPropagation();
