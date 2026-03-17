@@ -21,11 +21,13 @@ export default function LoginPage() {
       setError('密码至少4位');
       return;
     }
+
     setLoading(true);
     try {
       const result = isRegister
-        ? await store.register(phone, password)
-        : await store.login(phone, password);
+        ? await store.cloudRegister(phone, password)
+        : await store.cloudLogin(phone, password);
+
       if (result.ok) {
         const child = store.getChild();
         navigate(child ? '/home' : '/child-profile');
@@ -33,7 +35,7 @@ export default function LoginPage() {
         setError(result.msg);
       }
     } catch {
-      setError('网络连接失败，请检查网络');
+      setError('网络异常，请重试');
     } finally {
       setLoading(false);
     }
@@ -114,7 +116,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-amber-500/60 text-xs mt-6">
-          数据安全保存在云端，换设备也不丢失
+          ☁️ 数据云端同步
         </p>
       </div>
     </div>
