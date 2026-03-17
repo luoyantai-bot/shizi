@@ -159,7 +159,7 @@ function syncToServer() {
   if (syncTimer) clearTimeout(syncTimer);
   syncTimer = setTimeout(async () => {
     try {
-      await fetch('/api/data/save', {
+      await fetch('/api/sync/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, data: exportData() }),
