@@ -651,6 +651,34 @@ export function getAdvice(): string[] {
   return advice;
 }
 
+// ===== Today's browsable characters =====
+// Get characters that were follow_read today (for "今日跟读" browse)
+export function getTodayFollowReadCharacters(): CharacterEntry[] {
+  const records = getRecords();
+  const todayStr = today();
+  const todayFollowReadIds = records
+    .filter(r => r.date === todayStr && r.action === 'follow_read')
+    .map(r => r.characterId);
+  // Deduplicate
+  const uniqueIds = [...new Set(todayFollowReadIds)];
+  return uniqueIds
+    .map(id => getCharacterById(id))
+    .filter(Boolean) as CharacterEntry[];
+}
+
+// Get characters that were reviewed today (for "已复习" browse)
+export function getTodayReviewedCharacters(): CharacterEntry[] {
+  const records = getRecords();
+  const todayStr = today();
+  const todayReviewedIds = records
+    .filter(r => r.date === todayStr && (r.action === 'review_known' || r.action === 'review_unknown'))
+    .map(r => r.characterId);
+  // Deduplicate
+  const uniqueIds = [...new Set(todayReviewedIds)];
+  return uniqueIds
+    .map(id => getCharacterById(id))
+    .filter(Boolean) as CharacterEntry[];
+}
 // ===== Reset (for testing) =====
 export function resetAllData() {
   const keys = Object.keys(localStorage).filter(k => k.startsWith('literacy_'));
