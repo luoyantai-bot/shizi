@@ -22,7 +22,7 @@ export default function BrowseCardsPage() {
   const [imgError, setImgError] = useState(false);
   useEffect(() => {
     const list = type === 'review'
-      ? store.getTodayReviewedCharacters()
+      ? store.getTodayFollowReadCharacters()
       : store.getTodayLearnedCharacters();
     setChars(list);
   }, [type]);
