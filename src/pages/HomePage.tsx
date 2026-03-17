@@ -160,16 +160,36 @@ export default function HomePage() {
 
       {/* Quick Stats */}
       <div className="mt-6 animate-fadeIn grid grid-cols-3 gap-3">
-        <div className="bg-white/60 rounded-2xl p-3 text-center">
+        <button
+          onClick={() => {
+            const todayNew = store.getTodayFollowReadCharacters();
+            if (todayNew.length > 0) navigate('/browse?mode=new');
+          }}
+          className="bg-white/60 rounded-2xl p-3 text-center active:scale-95 transition-transform"
+        >
           <div className="text-2xl mb-1">📖</div>
           <div className="text-xs text-gray-500">今日跟读</div>
           <div className="font-bold text-amber-800">{stats.todayNewCount}/5</div>
-        </div>
-        <div className="bg-white/60 rounded-2xl p-3 text-center">
+          {stats.todayNewCount > 0 && (
+            <div className="text-xs text-amber-500 mt-1">点击回顾</div>
+          )}
+        </button>
+        <button
+          onClick={() => {
+            const reviewed = store.getTodayReviewedCharacters();
+            if (reviewed.length > 0) navigate('/browse?mode=review');
+          }}
+          className="bg-white/60 rounded-2xl p-3 text-center active:scale-95 transition-transform"
+        >
           <div className="text-2xl mb-1">🔄</div>
-          <div className="text-xs text-gray-500">待复习</div>
-          <div className="font-bold text-amber-800">{reviewChars.length}</div>
-        </div>
+          <div className="text-xs text-gray-500">{reviewChars.length > 0 ? '待复习' : '已复习'}</div>
+          <div className="font-bold text-amber-800">
+            {reviewChars.length > 0 ? reviewChars.length : stats.todayReviewedCount > 0 ? `${stats.todayReviewedCount} ✅` : 0}
+          </div>
+          {reviewChars.length === 0 && stats.todayReviewedCount > 0 && (
+            <div className="text-xs text-amber-500 mt-1">点击回顾</div>
+          )}
+        </button>
         <div className="bg-white/60 rounded-2xl p-3 text-center">
           <div className="text-2xl mb-1">🎯</div>
           <div className="text-xs text-gray-500">总目标</div>
