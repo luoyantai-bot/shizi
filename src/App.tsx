@@ -10,6 +10,7 @@ import LearningCompletePage from './pages/LearningCompletePage';
 import GrowthPage from './pages/GrowthPage';
 import MedalsPage from './pages/MedalsPage';
 import ReportPage from './pages/ReportPage';
+import BrowseCardsPage from './pages/BrowseCardsPage';
 
 function SplashPage() {
   const navigate = useNavigate();
@@ -131,6 +132,9 @@ function AppContent() {
         } />
         <Route path="/report" element={
           <ChildGuard><ReportPage /></ChildGuard>
+        } />
+        <Route path="/browse-cards" element={
+          <ChildGuard><BrowseCardsPage /></ChildGuard>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
