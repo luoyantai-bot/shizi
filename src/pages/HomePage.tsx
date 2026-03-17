@@ -189,7 +189,7 @@ export default function HomePage() {
             {todayReviewedChars.length > 0 ? todayReviewedChars.length : reviewChars.length}
           </div>
           {todayReviewedChars.length > 0 && (
-            <div className="text-[10px] text-amber-500 mt-1">点击回顾 →</div>
+            <div className="text-[11px] text-amber-500 mt-1">点击回顾 →</div>
           )}
         </button>
         <div className="bg-white/60 rounded-2xl p-3 text-center">
