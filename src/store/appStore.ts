@@ -96,7 +96,6 @@ const KEYS = {
   learningRecords: 'literacy_learning_records',
   earnedMedals: 'literacy_earned_medals',
   todaySession: 'literacy_today_session',
-  cloudToken: 'literacy_cloud_token',
 };
 
 // ===== Medal definitions =====
@@ -123,199 +122,21 @@ function setLS(key: string, val: unknown) {
   localStorage.setItem(key, JSON.stringify(val));
 }
 
-// Use device local timezone instead of UTC
 function today(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  return new Date().toISOString().split('T')[0];
 }
 
 function addDays(dateStr: string, days: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  date.setDate(date.getDate() + days);
-  const ry = date.getFullYear();
-  const rm = String(date.getMonth() + 1).padStart(2, '0');
-  const rd = String(date.getDate()).padStart(2, '0');
-  return `${ry}-${rm}-${rd}`;
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
 }
 
 function genId(): string {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 }
 
-// ================================================================
-// ===== Cloud Sync =====
-// ================================================================
-
-// Collect all literacy_* keys (except auth-related) from localStorage
-function collectSyncData(): Record<string, string> {
-  const data: Record<string, string> = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (
-      key &&
-      key.startsWith('literacy_') &&
-      key !== KEYS.cloudToken &&
-      key !== KEYS.users &&
-      key !== KEYS.currentUser
-    ) {
-      data[key] = localStorage.getItem(key) || '';
-    }
-  }
-  return data;
-}
-
-// Restore sync data to localStorage
-function restoreSyncData(data: Record<string, string>) {
-  // Remove existing synced keys first
-  const keysToRemove: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (
-      key &&
-      key.startsWith('literacy_') &&
-      key !== KEYS.cloudToken &&
-      key !== KEYS.users &&
-      key !== KEYS.currentUser
-    ) {
-      keysToRemove.push(key);
-    }
-  }
-  keysToRemove.forEach(k => localStorage.removeItem(k));
-
-  // Restore from cloud
-  for (const [key, value] of Object.entries(data)) {
-    if (key.startsWith('literacy_')) {
-      localStorage.setItem(key, value);
-    }
-  }
-}
-
-// Upload localStorage data to cloud (debounced)
-export function scheduleSync() {
-  const w = window as any;
-  if (w.__syncTimer) clearTimeout(w.__syncTimer);
-  w.__syncTimer = setTimeout(async () => {
-    const token = localStorage.getItem(KEYS.cloudToken);
-    if (!token) return;
-
-    const data = collectSyncData();
-    try {
-      await fetch('/api/sync/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ data }),
-      });
-    } catch {
-      // Silent fail — data is safe in localStorage
-    }
-  }, 1500);
-}
-
-// Download cloud data and restore to localStorage
-async function syncDownload(): Promise<void> {
-  const token = localStorage.getItem(KEYS.cloudToken);
-  if (!token) return;
-
-  try {
-    const res = await fetch('/api/sync/download', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    const result = await res.json();
-    if (result.ok && result.data && Object.keys(result.data).length > 0) {
-      restoreSyncData(result.data);
-    }
-  } catch {
-    // Silent fail — work with local data
-  }
-}
-
-// ===== Cloud Auth =====
-export async function cloudRegister(phone: string, password: string): Promise<{ ok: boolean; msg: string }> {
-  try {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      return { ok: false, msg: data.error || '注册失败' };
-    }
-
-    // Save cloud token
-    localStorage.setItem(KEYS.cloudToken, data.token);
-
-    // Create local user with SERVER's userId (ensures consistency)
-    const user: UserData = {
-      userId: data.userId,
-      phone,
-      password,
-      createdAt: new Date().toISOString(),
-    };
-    const users = getUsers();
-    users.push(user);
-    setLS(KEYS.users, users);
-    setLS(KEYS.currentUser, user);
-
-    // Upload initial data
-    scheduleSync();
-
-    return { ok: true, msg: '注册成功' };
-  } catch {
-    // Fallback to local-only mode
-    return register(phone, password);
-  }
-}
-
-export async function cloudLogin(phone: string, password: string): Promise<{ ok: boolean; msg: string }> {
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      return { ok: false, msg: data.error || '登录失败' };
-    }
-
-    // Save cloud token
-    localStorage.setItem(KEYS.cloudToken, data.token);
-
-    // Download cloud data FIRST (restores children, statuses, records, medals)
-    await syncDownload();
-
-    // Set up local user with server's userId
-    const user: UserData = {
-      userId: data.userId,
-      phone,
-      password,
-      createdAt: new Date().toISOString(),
-    };
-    const users = getUsers();
-    const idx = users.findIndex(u => u.userId === data.userId || u.phone === phone);
-    if (idx >= 0) users[idx] = user;
-    else users.push(user);
-    setLS(KEYS.users, users);
-    setLS(KEYS.currentUser, user);
-
-    return { ok: true, msg: '登录成功' };
-  } catch {
-    // Fallback to local-only mode
-    return login(phone, password);
-  }
-}
-
-// ================================================================
-// ===== Local Auth (fallback) =====
-// ================================================================
+// ===== Auth =====
 export function getUsers(): UserData[] {
   return getLS<UserData[]>(KEYS.users, []);
 }
@@ -344,7 +165,6 @@ export function login(phone: string, password: string): { ok: boolean; msg: stri
 
 export function logout() {
   localStorage.removeItem(KEYS.currentUser);
-  localStorage.removeItem(KEYS.cloudToken);
 }
 
 // ===== Child =====
@@ -370,7 +190,6 @@ export function createChild(nickname: string, birthYear: number, birthMonth: num
   if (existing >= 0) children[existing] = child;
   else children.push(child);
   setLS(KEYS.children, children);
-  scheduleSync(); // sync to cloud
   return child;
 }
 
@@ -495,12 +314,14 @@ export function getStats(): Stats {
 }
 
 // ===== Today's new characters =====
+// Returns whether there are still new characters available to learn today
 export function hasNewCharactersAvailable(): boolean {
   const stats = getStats();
-  if (stats.todayNewCount >= 5) return false;
+  if (stats.todayNewCount >= 5) return false; // 5 follow_reads done
   return getNextNewCharacter() !== null;
 }
 
+// Get the next single unlearned character
 export function getNextNewCharacter(): CharacterEntry | null {
   const stats = getStats();
   const all = getAllStatuses();
@@ -518,6 +339,7 @@ export function getNextNewCharacter(): CharacterEntry | null {
   return null;
 }
 
+// Legacy: returns a batch for display (used by HomePage for count)
 export function getTodayNewCharacters(): CharacterEntry[] {
   const stats = getStats();
   if (stats.todayNewCount >= 5) return [];
@@ -528,6 +350,7 @@ export function getTodayNewCharacters(): CharacterEntry[] {
   const startIdx = levels.indexOf(stats.currentLevel);
 
   const result: CharacterEntry[] = [];
+  // Return up to 10 to show there are chars available (we don't know how many will be known_directly)
   const maxFetch = 10;
   for (let i = startIdx; i < levels.length && result.length < maxFetch; i++) {
     const levelChars = getCharactersByLevel(levels[i]).filter(c => !learnedIds.has(c.id));
@@ -561,7 +384,6 @@ export function submitNewCharacter(charId: string, action: 'known_directly' | 'f
     addRecord(charId, 'follow_read');
   }
   checkMedals();
-  scheduleSync(); // sync to cloud
 }
 
 // ===== Today's review characters =====
@@ -613,7 +435,6 @@ export function submitReview(charId: string, result: 'known' | 'unknown') {
     addRecord(charId, 'review_known');
   }
   checkMedals();
-  scheduleSync(); // sync to cloud
 }
 
 // ===== Medals =====
@@ -690,6 +511,35 @@ export function getAdvice(): string[] {
     advice.push('✨ 开始今天的学习之旅吧！');
   }
   return advice;
+}
+
+// ===== Today's browsable characters =====
+// Get characters that were follow_read today (for "今日跟读" browse)
+export function getTodayFollowReadCharacters(): CharacterEntry[] {
+  const records = getRecords();
+  const todayStr = today();
+  const todayFollowReadIds = records
+    .filter(r => r.date === todayStr && r.action === 'follow_read')
+    .map(r => r.characterId);
+  // Deduplicate
+  const uniqueIds = [...new Set(todayFollowReadIds)];
+  return uniqueIds
+    .map(id => getCharacterById(id))
+    .filter(Boolean) as CharacterEntry[];
+}
+
+// Get characters that were reviewed today (for "已复习" browse)
+export function getTodayReviewedCharacters(): CharacterEntry[] {
+  const records = getRecords();
+  const todayStr = today();
+  const todayReviewedIds = records
+    .filter(r => r.date === todayStr && (r.action === 'review_known' || r.action === 'review_unknown'))
+    .map(r => r.characterId);
+  // Deduplicate
+  const uniqueIds = [...new Set(todayReviewedIds)];
+  return uniqueIds
+    .map(id => getCharacterById(id))
+    .filter(Boolean) as CharacterEntry[];
 }
 
 // ===== Reset (for testing) =====
