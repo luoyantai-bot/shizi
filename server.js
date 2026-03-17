@@ -49,7 +49,7 @@ function authMiddleware(req, res, next) {
 }
 
 // ===== Auth Routes =====
-app.post('/api/auth/register', (req, res) => {
+app.post('/auth/register', (req, res) => {
   const { phone, password } = req.body;
   if (!phone || !password) return res.status(400).json({ msg: '请输入手机号和密码' });
   if (phone.length < 6) return res.status(400).json({ msg: '请输入有效的手机号' });
@@ -73,7 +73,7 @@ app.post('/api/auth/register', (req, res) => {
   });
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/auth/login', (req, res) => {
   const { phone, password } = req.body;
   if (!phone || !password) return res.status(400).json({ msg: '请输入手机号和密码' });
 
@@ -90,7 +90,7 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
-app.get('/api/me', authMiddleware, (req, res) => {
+app.get('/me', authMiddleware, (req, res) => {
   const db = readDB();
   const user = db.users.find(u => u.userId === req.userId);
   if (!user) return res.status(404).json({ msg: '用户不存在' });
@@ -99,14 +99,14 @@ app.get('/api/me', authMiddleware, (req, res) => {
 
 // ===== Data Sync Routes =====
 // GET all learning data for current user
-app.get('/api/data/all', authMiddleware, (req, res) => {
+app.get('/data/all', authMiddleware, (req, res) => {
   const db = readDB();
   const data = db.userData[req.userId] || {};
   res.json(data);
 });
 
 // POST sync all learning data
-app.post('/api/data/sync', authMiddleware, (req, res) => {
+app.post('/data/sync', authMiddleware, (req, res) => {
   const db = readDB();
   db.userData[req.userId] = {
     ...req.body,
