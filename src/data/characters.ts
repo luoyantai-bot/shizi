@@ -278,7 +278,7 @@ function buildCharacters(
       wordExample: word,
       difficultyLevel: level,
       sortOrder: startId + order,
-      imageUrl: `/images/char/${char}.png`,
+      imageUrl: `https://pub-162cd5f973914fdc88457a3ff54fbb92.r2.dev/shizi/${char}.png`,
     });
   }
   return result;
