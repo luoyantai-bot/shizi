@@ -6,9 +6,10 @@ import type { CharStatus } from '../store/appStore';
 
 type ReviewChar = CharacterEntry & { status: CharStatus };
 
-function speak(text: string) {
+function speakCharAndWord(char: string, word: string) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
+    const text = `${char}，${word}`;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-CN';
     utterance.rate = 0.6;
@@ -49,7 +50,7 @@ export default function ReviewPage() {
 
   const handleSpeak = (e: React.MouseEvent) => {
     e.stopPropagation();
-    speak(currentChar.character);
+    speakCharAndWord(currentChar.character, currentChar.wordExample);
   };
 
   const handleResult = (result: 'known' | 'unknown') => {
