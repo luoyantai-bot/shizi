@@ -171,7 +171,7 @@ export default function HomePage() {
           <div className="text-xs text-gray-500">今日跟读</div>
           <div className="font-bold text-amber-800">{stats.todayNewCount}/5</div>
           {todayFollowReadChars.length > 0 && (
-            <div className="text-[10px] text-amber-500 mt-1">点击回顾 →</div>
+            <div className="text-[11px] text-amber-500 mt-1">点击回顾 →</div>
           )}
         </button>
         <button
