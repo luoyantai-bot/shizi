@@ -69,7 +69,7 @@ export default function NewCharactersPage() {
 
   const handleSpeak = (e: React.MouseEvent) => {
     e.stopPropagation();
-    speak(currentChar.character);
+    speakCharAndWord(currentChar.character, currentChar.wordExample);
   };
 
   const handleKnown = () => {
