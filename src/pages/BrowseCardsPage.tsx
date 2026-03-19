@@ -3,9 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as store from '../store/appStore';
 import type { CharacterEntry } from '../data/characters';
 
-function speak(text: string) {
+function speakCharAndWord(char: string, word: string) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
+    // Speak: "耳，耳朵" — character, pause, then word example
+    const text = `${char}，${word}`;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-CN';
     utterance.rate = 0.6;
@@ -49,7 +51,7 @@ export default function BrowseCardsPage() {
 
   const handleSpeak = (e: React.MouseEvent) => {
     e.stopPropagation();
-    speak(currentChar.character);
+    speakCharAndWord(currentChar.character, currentChar.wordExample);
   };
 
   const handlePrev = () => {
