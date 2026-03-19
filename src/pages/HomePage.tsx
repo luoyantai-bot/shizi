@@ -8,9 +8,9 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const child = store.getChild();
-
   useEffect(() => {
-    setStats(store.getStats(), []);
+    setStats(store.getStats());
+  }, []);
 
   if (!stats) return null;
 
