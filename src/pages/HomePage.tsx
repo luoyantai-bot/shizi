@@ -10,23 +10,8 @@ export default function HomePage() {
   const child = store.getChild();
 
   useEffect(() => {
-    setStats(store.getStats());
+    setStats(store.getStats(), []);
 
-    // Greeting TTS on entering home page
-    const nickname = child?.nickname || '宝宝';
-    const greetingText = `你好呀，${nickname}，我们一起认字吧`;
-    const timer = setTimeout(() => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(greetingText);
-        utterance.lang = 'zh-CN';
-        utterance.rate = 0.9;
-        utterance.pitch = 1.2;
-        window.speechSynthesis.speak(utterance);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);  
   if (!stats) return null;
 
   const progress = Math.round((stats.literacyCount / stats.totalCharacters) * 100);
