@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import * as store from '../store/appStore';
 import type { CharacterEntry } from '../data/characters';
 
-function speak(text: string) {
+function speakCharAndWord(char: string, word: string) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
+    // Speak: "耳，耳朵" — character, pause, then word example
+    const text = `${char}，${word}`;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-CN';
     utterance.rate = 0.6;
@@ -104,10 +106,10 @@ export default function NewCharactersPage() {
       // Enter follow-read mode: flip to back and play sound
       setFollowReadMode(true);
       setIsFlipped(true);
-      speak(currentChar.character);
+      speakCharAndWord(currentChar.character, currentChar.wordExample);
     } else {
       // Already in follow-read mode, just replay sound
-      speak(currentChar.character);
+      speakCharAndWord(currentChar.character, currentChar.wordExample);
     }
   };
 
