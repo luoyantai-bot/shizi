@@ -665,6 +665,18 @@ export function getTodayFollowReadCharacters(): CharacterEntry[] {
     .filter(Boolean) as CharacterEntry[];
 }
 
+// Get all literacy characters (known_directly + mastered) for "已识字" browse
+export function getLiteracyCharacters(): CharacterEntry[] {
+  const all = getAllStatuses();
+  const literacyIds = all
+    .filter(s => s.status === 'known_directly' || s.status === 'mastered')
+    .map(s => s.characterId);
+  const list = literacyIds
+    .map(id => getCharacterById(id))
+    .filter(Boolean) as CharacterEntry[];
+  return list.sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
 // Get characters that were reviewed today (for "已复习" browse)
 export function getTodayReviewedCharacters(): CharacterEntry[] {
   const records = getRecords();
