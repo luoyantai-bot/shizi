@@ -39,7 +39,13 @@ export default function HomePage() {
       </div>
 
       {/* Literacy Count Circle */}
-      <div className="animate-scaleIn bg-white/80 backdrop-blur rounded-3xl p-6 shadow-lg mb-6">
+      <button
+        type="button"
+        onClick={() => stats.literacyCount > 0 && navigate('/browse-cards?mode=literacy')}
+        className={`animate-scaleIn w-full text-left bg-white/80 backdrop-blur rounded-3xl p-6 shadow-lg mb-6 transition-all ${
+          stats.literacyCount > 0 ? 'active:scale-[0.98] cursor-pointer hover:bg-white/90' : 'cursor-default'
+        }`}
+      >
         <div className="flex items-center justify-center">
           <div className="relative w-36 h-36">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
@@ -60,6 +66,9 @@ export default function HomePage() {
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-bold text-amber-800">{stats.literacyCount}</span>
               <span className="text-xs text-amber-500">已识字</span>
+              {stats.literacyCount > 0 && (
+                <span className="text-[11px] text-amber-500 mt-0.5">点击回顾 →</span>
+              )}
             </div>
           </div>
         </div>
@@ -75,7 +84,7 @@ export default function HomePage() {
             <div className="text-xs text-gray-500">学习中</div>
           </div>
         </div>
-      </div>
+      </button>
 
       {/* Current Level */}
       <div className="animate-fadeIn bg-gradient-to-r from-amber-100 to-orange-100 rounded-2xl p-4 mb-6">
