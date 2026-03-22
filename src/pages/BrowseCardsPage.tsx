@@ -19,7 +19,7 @@ function speakCharAndWord(char: string, word: string) {
 export default function BrowseCardsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const mode = searchParams.get('mode') || 'new'; // 'new' or 'review'
+  const mode = searchParams.get('mode') || 'new'; // 'new' | 'review' | 'literacy'
 
   const [chars, setChars] = useState<CharacterEntry[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -30,6 +30,8 @@ export default function BrowseCardsPage() {
     let list: CharacterEntry[] = [];
     if (mode === 'new') {
       list = store.getTodayFollowReadCharacters();
+    } else if (mode === 'literacy') {
+      list = store.getLiteracyCharacters();
     } else {
       list = store.getTodayReviewedCharacters();
     }
@@ -43,7 +45,7 @@ export default function BrowseCardsPage() {
   if (chars.length === 0) return null;
 
   const currentChar = chars[currentIdx];
-  const title = mode === 'new' ? '今日跟读回顾' : '今日复习回顾';
+  const title = mode === 'new' ? '今日跟读回顾' : mode === 'literacy' ? '已识字回顾' : '今日复习回顾';
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
