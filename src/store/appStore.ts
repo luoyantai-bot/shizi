@@ -85,7 +85,7 @@ export interface DailyRecord {
 
 // ===== Constants =====
 const STAGE_INTERVALS: Record<number, number> = {
-  1: 1, 2: 3, 3: 7, 4: 14, 5: 21, 6: 30, 7: 0,
+  1: 1, 2: 2, 3: 4, 4: 7, 5: 7, 6: 9, 7: 1,
 };
 
 const KEYS = {
@@ -555,7 +555,7 @@ export function submitReview(charId: string, result: 'known' | 'unknown') {
     addRecord(charId, 'review_unknown');
   } else {
     const currentStage = parseInt(status.status.replace('learning_stage_', ''));
-    if (currentStage >= 7) {
+    if (currentStage >= 6) {
       upsertStatus(charId, {
         status: 'mastered',
         lastReviewAt: today(),
